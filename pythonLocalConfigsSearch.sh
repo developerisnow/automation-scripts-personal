@@ -1,0 +1,1 @@
+/Users/user/Programms/projects/_by_categories/_devops/macos/python_env/pythonLocalConfigsSearch.sh
