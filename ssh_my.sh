@@ -15,3 +15,11 @@ DESTINATION_PUB_PATH=~/.ssh/id_rsa.pub
 cp $SOURCE_PUB_PATH $DESTINATION_PUB_PATH
 
 echo "SSH MINE keys copied successfully!"
+
+# Show last 16 characters of the actual key content
+echo "Current private key ends with: $(grep -v -- "-----" $DESTINATION_PATH | tr -d '\n' | tail -c 16)"
+
+# Print public key information separately
+echo -e "\nPublic key details:"
+echo "Label: $(awk '{print $3}' $DESTINATION_PUB_PATH)"
+echo -e "Key: $(awk '{print $2}' $DESTINATION_PUB_PATH)\n"
