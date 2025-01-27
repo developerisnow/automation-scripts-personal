@@ -6,6 +6,7 @@ if [ -z "$1" ]; then
     echo "Использование:"
     echo "  $0 <путь к папке>"
     echo "  $0 bcode2prompt <файл с путями>"
+    echo "  $0 treecode2prompt <путь к папке>"
     exit 1
 fi
 
@@ -14,8 +15,64 @@ CURRENT_DIR=$(pwd)
 echo "Текущая директория: $CURRENT_DIR"
 
 COMMAND=$1
+INPUT_FOLDER="$2"
 
-if [ "$COMMAND" = "bcode2prompt" ]; then
+# Check if this is a treecode2prompt command first
+if [ "$COMMAND" = "treecode2prompt" ]; then
+    # If no second argument provided, use current directory
+    if [ -z "$INPUT_FOLDER" ]; then
+        INPUT_FOLDER="."
+    fi
+    
+    # Проверяем существование пути
+    if [ ! -e "$INPUT_FOLDER" ]; then
+        INPUT_FOLDER="$CURRENT_DIR/$INPUT_FOLDER"
+        if [ ! -e "$INPUT_FOLDER" ]; then
+            echo "Ошибка: Путь не существует: $2"
+            exit 1
+        fi
+    fi
+
+    # Получаем путь к папке
+    if [ "$INPUT_FOLDER" = "." ]; then
+        FOLDER_NAME=$(basename "$CURRENT_DIR")
+    else
+        FOLDER_NAME=$(basename "$INPUT_FOLDER")
+    fi
+
+    OUTPUT_DIR="$CURRENT_DIR/.references/o1-pro/"
+    mkdir -p "$OUTPUT_DIR"
+
+    TIMESTAMP=$(date '+%Y-%m-%d_%H-%M')
+    OUTPUT_FILE="${OUTPUT_DIR}tree_src_${TIMESTAMP}.txt"
+
+    # Get tree structure using find and tree
+    echo "=== File Tree ===" > "$OUTPUT_FILE"
+    cd "$CURRENT_DIR" && find "$INPUT_FOLDER" -type f -not -path "*/\.*" | sort | tree --fromfile >> "$OUTPUT_FILE"
+    
+    # Get line count using wc -l
+    echo -e "\n=== Line Count Statistics ===" >> "$OUTPUT_FILE"
+    TOTAL_LINES=$(find "$INPUT_FOLDER" -type f -not -path "*/\.*" -exec wc -l {} + | tail -n1)
+    echo "Total lines of code: $TOTAL_LINES" >> "$OUTPUT_FILE"
+    
+    # Calculate and add folder size
+    echo -e "\n=== Size Statistics ===" >> "$OUTPUT_FILE"
+    FOLDER_SIZE=$(du -sh "$INPUT_FOLDER" | cut -f1)
+    echo "Total folder size: $FOLDER_SIZE" >> "$OUTPUT_FILE"
+
+    if [ -f "$OUTPUT_FILE" ]; then
+        FILE_SIZE=$(du -sh "$OUTPUT_FILE" | cut -f1)
+        echo "Файл успешно сохранён: $OUTPUT_FILE"
+        echo "Размер файла: $FILE_SIZE"
+        
+        # Display the content in terminal as well
+        cat "$OUTPUT_FILE"
+    else
+        echo "Ошибка: Файл не был создан."
+        exit 1
+    fi
+
+elif [ "$COMMAND" = "bcode2prompt" ]; then
     if [ -z "$2" ]; then
         echo "Ошибка: Необходимо указать файл с путями."
         echo "Использование: $0 bcode2prompt <файл с путями>"
@@ -91,17 +148,6 @@ if [ "$COMMAND" = "bcode2prompt" ]; then
     fi
 
 else
-    INPUT_FOLDER="$1"
-    
-    # Проверяем существование пути
-    if [ ! -e "$INPUT_FOLDER" ]; then
-        INPUT_FOLDER="$CURRENT_DIR/$1"
-        if [ ! -e "$INPUT_FOLDER" ]; then
-            echo "Ошибка: Путь не существует: $1"
-            exit 1
-        fi
-    fi
-
     # Получаем путь к папке
     if [ "$INPUT_FOLDER" = "." ]; then
         FOLDER_NAME=$(basename "$CURRENT_DIR")
