@@ -1,0 +1,9 @@
+
+#!/bin/bash
+unset CONDA_DEFAULT_ENV
+unset CONDA_EXE
+unset CONDA_PREFIX
+unset CONDA_PROMPT_MODIFIER
+unset CONDA_PYTHON_EXE
+unset CONDA_SHLVL
+

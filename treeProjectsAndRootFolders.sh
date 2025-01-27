@@ -1,8 +1,22 @@
 #!/bin/bash
 
 # Default values
-MODE="md"
+MODE="both"
 ROOT_DIR="."
+
+# Function to display help
+show_help() {
+    echo "Usage: $0 [options] [directory]"
+    echo ""
+    echo "Options:"
+    echo "  --mode=md|csv|both   Specify output mode. Default is 'both'."
+    echo "  --help               Show this help message."
+    echo ""
+    echo "Examples:"
+    echo "  $0 --mode=md /path/to/directory"
+    echo "  $0 --mode=csv /path/to/directory"
+    echo "  $0 --mode=both /path/to/directory"
+}
 
 # Parse arguments
 for arg in "$@"; do
@@ -10,6 +24,10 @@ for arg in "$@"; do
         --mode=*)
         MODE="${arg#*=}"
         shift
+        ;;
+        --help)
+        show_help
+        exit 0
         ;;
         *)
         ROOT_DIR="$arg"
@@ -19,7 +37,9 @@ done
 
 # Clean up the folder name for the output file
 FOLDER_NAME=$(basename "$(cd "$ROOT_DIR" && pwd)")
-OUTPUT_FILE="tree_${FOLDER_NAME}.${MODE}"
+TIMESTAMP=$(date "+%Y-%m-%d_%H-%M")
+OUTPUT_FILE_MD="treeFolders_${FOLDER_NAME}-${TIMESTAMP}.md"
+OUTPUT_FILE_CSV="treeFolders_${FOLDER_NAME}-${TIMESTAMP}.csv"
 
 # Function to count folders inside
 count_folders() {
@@ -51,19 +71,40 @@ get_folder_modified() {
     stat -f "%Sm" "$dir" | xargs -I {} date -j -f "%b %d %H:%M:%S %Y" "{}" "+%Y-%m-%d_%H-%M"
 }
 
+# Function to check if directory should be skipped
+should_skip_directory() {
+    local dir="$1"
+    local name=$(basename "$dir")
+    
+    # List of directory patterns to skip
+    [[ "$dir" == *"/node_modules/"* ]] && return 0
+    [[ "$dir" == *"/__pycache__/"* ]] && return 0
+    [[ "$dir" == *"/target/"* && -f "${dir%/target/*}/Cargo.toml" ]] && return 0
+    [[ "$dir" == *"/venv/"* ]] && return 0
+    [[ "$dir" == *"/.venv/"* ]] && return 0
+    [[ "$dir" == *"/dist/"* ]] && return 0
+    [[ "$dir" == *"/build/"* ]] && return 0
+    return 1
+}
+
 # Function to create CSV structure
 create_csv() {
     local dir="$1"
-    local temp_file="${OUTPUT_FILE}.tmp"
+    local temp_file="${OUTPUT_FILE_CSV}.tmp"
     
     # Write header only if this is the root call (not a recursive call)
     if [ "$dir" = "$ROOT_DIR" ]; then
-        echo "folderTitle,folderSizeMb,folderCreated,folderModified,folderPath,FoldersInsideFoldersAmount,FilesInsideFolderAmount" > "$OUTPUT_FILE"
+        echo "folderTitle,folderSizeMb,folderCreated,folderModified,folderPath,FoldersInsideFoldersAmount,FilesInsideFolderAmount" > "$OUTPUT_FILE_CSV"
     fi
     
     # Process directories
     for d in "$dir"/*/; do
         [ -d "$d" ] || continue
+        
+        # Skip if directory matches patterns
+        if should_skip_directory "$d"; then
+            continue
+        fi
         
         local name=$(basename "$d")
         local size=$(get_folder_size "$d")
@@ -84,7 +125,7 @@ create_csv() {
     
     # Sort and append only if this is the root call
     if [ "$dir" = "$ROOT_DIR" ] && [ -f "$temp_file" ]; then
-        sort -t',' -k3 "$temp_file" >> "$OUTPUT_FILE"
+        sort -t',' -k3 "$temp_file" >> "$OUTPUT_FILE_CSV"
         rm "$temp_file"
     fi
 }
@@ -97,6 +138,11 @@ create_tree() {
     for d in "$dir"/*/; do
         [ -d "$d" ] || continue
         
+        # Skip if directory matches patterns
+        if should_skip_directory "$d"; then
+            continue
+        fi
+        
         local name=$(basename "$d")
         echo "${prefix}- ${name}"
         
@@ -107,15 +153,19 @@ create_tree() {
 }
 
 # Create the output file based on mode
-if [ "$MODE" = "md" ]; then
-    echo "# Directory Tree for ${FOLDER_NAME}" > "$OUTPUT_FILE"
-    echo "" >> "$OUTPUT_FILE"
-    create_tree "$ROOT_DIR" "" >> "$OUTPUT_FILE"
-elif [ "$MODE" = "csv" ]; then
-    create_csv "$ROOT_DIR"
-else
-    echo "Invalid mode. Use --mode=md or --mode=csv"
-    exit 1
+if [ "$MODE" = "md" ] || [ "$MODE" = "both" ]; then
+    echo "# Directory Tree for ${FOLDER_NAME}" > "$OUTPUT_FILE_MD"
+    echo "" >> "$OUTPUT_FILE_MD"
+    create_tree "$ROOT_DIR" "" >> "$OUTPUT_FILE_MD"
+    echo "Markdown structure has been saved to treeFolders_${FOLDER_NAME}-${TIMESTAMP}.md"
 fi
 
-echo "Structure has been saved to $OUTPUT_FILE"
+if [ "$MODE" = "csv" ] || [ "$MODE" = "both" ]; then
+    create_csv "$ROOT_DIR"
+    echo "CSV structure has been saved to treeFolders_${FOLDER_NAME}-${TIMESTAMP}.csv"
+fi
+
+if [ "$MODE" != "md" ] && [ "$MODE" != "csv" ] && [ "$MODE" != "both" ]; then
+    echo "Invalid mode. Use --mode=md, --mode=csv, or --mode=both"
+    exit 1
+fi
