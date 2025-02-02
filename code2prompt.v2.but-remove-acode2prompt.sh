@@ -164,9 +164,6 @@ elif [ "$COMMAND" = "bcode2prompt" ]; then
     fi
 
 else
-    # Regular acode2prompt functionality
-    INPUT_FOLDER="$1"
-    
     # Получаем путь к папке
     if [ "$INPUT_FOLDER" = "." ]; then
         FOLDER_NAME=$(basename "$CURRENT_DIR")
