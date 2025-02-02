@@ -178,7 +178,7 @@ if __name__ == "__main__":
                        help='Comma-separated list of folders to exclude (e.g., "logs,test")')
     parser.add_argument('--exclude-hidden', action='store_true',
                        help='Exclude hidden files (starting with ".")')
-    
+
     args = parser.parse_args()
     
     # Get commit range based on input mode
@@ -194,6 +194,7 @@ if __name__ == "__main__":
     excluded_extensions = [ext.strip() for ext in args.typesexclude.split(',')] if args.typesexclude else None
     excluded_folders = [folder.strip() for folder in args.foldersexclude.split(',')] if args.foldersexclude else None
     
+    # Generate the report file
     report = generate_report(commit1, commit2, args.typeschanges, 
                            excluded_extensions, excluded_folders, args.exclude_hidden)
     
@@ -205,3 +206,16 @@ if __name__ == "__main__":
         f.write(report)
     
     print(f"Report generated successfully at: {output_file}")
+    
+    # Always extract added and modified files, prefix them with '@', and copy to clipboard.
+    changes = get_file_changes(commit1, commit2, args.typeschanges, excluded_extensions, excluded_folders, args.exclude_hidden)
+    files_to_copy = []
+    for status in ('A', 'M'):
+        for filepath in changes.get(status, []):
+            files_to_copy.append("@" + os.path.basename(filepath))
+    clipboard_output = "\n".join(files_to_copy)
+    if clipboard_output:
+        subprocess.run("pbcopy", input=clipboard_output, text=True, shell=True)
+        print("File list copied to clipboard!")
+    else:
+        print("No added or modified files found to copy!")
