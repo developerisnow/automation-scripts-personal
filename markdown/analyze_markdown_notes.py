@@ -3,12 +3,13 @@
 Скрипт для анализа Markdown заметок в каталоге /Users/user/____Sandruk
 
 Генерирует два CSV отчёта:
-1. markdown-notes-by-folders.csv: для каждой папки:
-   - folder, kb size md files, number of md files, number total lines of markdown files
+1. markdown-notes-by-folders.csv: для каждой папки (с учётом игнорирования каталогов из .scanignore,
+   скрытых папок, .obsidian, node_modules, симлинков и указанных в EXCLUDE_DIRS):
+     - folder, kb size md files, number of md files, number total lines of markdown files
 2. md-notes-list-top-200.csv: топ 200 заметок (по размеру) со столбцами:
    - title, size kb, lines, folder path(only last)
 
-При необходимости можно исключать определённые каталоги (например, __Repositories, __Vaults_Databases, __Templates, и т.п.) и симлинки.
+Прочие варианты отчётов можно добавить позже.
 """
 
 import os
@@ -17,23 +18,63 @@ import csv
 # Задайте корневой путь
 ROOT_PATH = "/Users/user/____Sandruk"
 
-# Список подстрок для исключения (если папка содержит один из указанных идентификаторов, её можно пропустить)
+# Список подстрок для исключения (старый список)
 EXCLUDE_DIRS = {"__Repositories", "__Vaults_Databases", "__Templates", "renamed", "symlink"}
 
-def should_skip_dir(dirpath):
-    """Проверяет, содержит ли dirpath любую из исключаемых подстрок."""
-    for ex in EXCLUDE_DIRS:
-        if ex in dirpath:
+def load_scanignore(root):
+    """
+    Загружает паттерны игнорирования из файла .scanignore.
+    Если файла нет – создаёт его с дефолтными значениями.
+    """
+    scanignore_file = os.path.join(root, ".scanignore")
+    defaults = {".obsidian", "node_modules"}
+    patterns = set()
+    if os.path.exists(scanignore_file):
+        with open(scanignore_file, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    patterns.add(line)
+    else:
+        # Файл отсутствует – создаём с дефолтными значениями
+        patterns = defaults.copy()
+        with open(scanignore_file, "w", encoding="utf-8") as f:
+            for pattern in defaults:
+                f.write(pattern + "\n")
+        print(f"Создан дефолтный файл {scanignore_file}")
+    return patterns
+
+def should_skip_dir(dirpath, ignore_set):
+    """Проверяет, следует ли пропустить каталог.
+
+    Критерии:
+    - если базовое имя начинается с точки (скрытый каталог);
+    - если хотя бы один сегмент пути точно совпадает с элементом ignore_set;
+    """
+    base = os.path.basename(dirpath)
+    if base.startswith('.') and base != '.':
+        return True
+    # Разбиваем путь и проверяем каждую его часть
+    parts = os.path.normpath(dirpath).split(os.sep)
+    for part in parts:
+        if part in ignore_set:
             return True
     return False
 
 def get_markdown_stats(root):
+    # Загружаем паттерны из .scanignore и объединяем с EXCLUDE_DIRS
+    ignore_set = load_scanignore(root).union(EXCLUDE_DIRS)
+
     folder_stats = {}  # ключ = относительный путь папки, значение = {'kb': ..., 'count': ..., 'lines': ...}
     file_stats = []    # список статистики по отдельным файлам
 
     for dirpath, dirnames, filenames in os.walk(root):
-        if should_skip_dir(dirpath):
-            continue  # пропускаем папки, которые не нужны
+        # Фильтруем подкаталоги: удаляем из списка те, что надо пропустить
+        dirnames[:] = [d for d in dirnames if not should_skip_dir(os.path.join(dirpath, d), ignore_set)]
+        # Если сам текущий каталог нужно пропустить – переход к следующему
+        if should_skip_dir(dirpath, ignore_set):
+            continue
+
         # Обрабатываем только .md файлы и пропускаем симлинки
         md_files = [f for f in filenames if f.endswith(".md") and not os.path.islink(os.path.join(dirpath, f))]
         if not md_files:
@@ -54,7 +95,6 @@ def get_markdown_stats(root):
             num_lines = 0
             try:
                 with open(full_path, "r", encoding="utf-8") as file:
-                    # используем readlines для подсчёта количества строк
                     lines = file.readlines()
                     num_lines = len(lines)
             except Exception as e:
@@ -64,7 +104,7 @@ def get_markdown_stats(root):
             total_lines += num_lines
             count_files += 1
 
-            # Для списка файлов — возьмем имя файла, размер и кол-во строк, а также последнее имя папки
+            # Для списка файлов — берем имя файла, размер, количество строк и последнее имя папки
             last_folder = os.path.basename(dirpath)
             file_stats.append({
                 "title": f,
