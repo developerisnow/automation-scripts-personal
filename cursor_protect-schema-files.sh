@@ -4,6 +4,9 @@
 REPO_PATH="/Users/user/__Repositories/LLMs-airpg__belbix"
 MIGRATIONS_PATH="$REPO_PATH/src/db/migrations"
 SCHEMAS_PATH="$REPO_PATH/src/models/validation"
+CONFIG_PATH="$REPO_PATH/src/config"
+GEN_PATH="$REPO_PATH/src/gen"
+GEN_MODELS_PATH="$REPO_PATH/src/models/gen"
 CHECKSUM_FILE="$REPO_PATH/.cursor/protected_files.sha256"
 GIT_ATTRIBUTES_FILE="$REPO_PATH/.gitattributes"
 
@@ -69,7 +72,7 @@ verify_checksums() {
             echo "❌ File integrity violation detected!"
             echo "🔄 Restoring protection..."
             lock_files "$MIGRATIONS_PATH"
-            lock_files "$SCHEMAS_PATH"
+            # lock_files "$SCHEMAS_PATH"
             return 1
         }
     else
@@ -90,7 +93,10 @@ case "$1" in
                 ;;
             "all")
                 lock_files "$MIGRATIONS_PATH"
-                lock_files "$SCHEMAS_PATH"
+                # lock_files "$SCHEMAS_PATH"
+                # lock_files "$CONFIG_PATH"
+                # lock_files "$GEN_PATH"
+                # lock_files "$GEN_MODELS_PATH"
                 ;;
             *)
                 echo "Usage: $0 lock [migrations|schemas|all]"
@@ -106,12 +112,24 @@ case "$1" in
             "schemas")
                 unlock_files "$SCHEMAS_PATH"
                 ;;
+            "config")
+                unlock_files "$CONFIG_PATH"
+                ;;
+            "gen")
+                unlock_files "$GEN_PATH"
+                ;;
+            "gen_models")
+                unlock_files "$GEN_MODELS_PATH"
+                ;;
             "all")
                 unlock_files "$MIGRATIONS_PATH"
                 unlock_files "$SCHEMAS_PATH"
+                unlock_files "$CONFIG_PATH"
+                unlock_files "$GEN_PATH"
+                unlock_files "$GEN_MODELS_PATH"
                 ;;
             *)
-                echo "Usage: $0 unlock [migrations|schemas|all]"
+                echo "Usage: $0 unlock [migrations|schemas|config|gen|gen_models|all]"
                 exit 1
                 ;;
         esac

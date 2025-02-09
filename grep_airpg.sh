@@ -55,7 +55,15 @@ done
 
 STAT_OUTPUT="${STAT_OUTPUT}Total ${TOTAL_COUNT} in all ${PATHS_ARG}\n"
 
-FINAL_OUTPUT="${STAT_OUTPUT}\n${MATCH_OUTPUT}"
+# Extract unique file names (from the left part of a colon), get basename and add "@" prefix
+UNIQUE_FILES=$(echo -e "$MATCH_OUTPUT" | grep ':' | cut -d: -f1 | xargs -n1 basename | sort -u | sed 's/^/@/')
+if [ -n "$UNIQUE_FILES" ]; then
+  UNIQUE_OUTPUT="\nUnique Files:\n${UNIQUE_FILES}"
+else
+  UNIQUE_OUTPUT=""
+fi
+
+FINAL_OUTPUT="${STAT_OUTPUT}\n${MATCH_OUTPUT}\n${UNIQUE_OUTPUT}"
 
 # Output to terminal
 echo -e "$FINAL_OUTPUT"
