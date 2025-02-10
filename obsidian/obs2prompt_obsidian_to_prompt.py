@@ -224,18 +224,40 @@ class ObsidianLinkCollector:
         self._debug(f"No matching file found for variants: {variants}")
         return None
 
+    def get_statistics(self) -> dict:
+        """Get statistics about processed files."""
+        total_lines = sum(len(content.splitlines()) for _, content in self.collected_files)
+        total_size = sum(os.path.getsize(path) for path, _ in self.collected_files)
+        total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)
+        
+        return {
+            'files': len(self.collected_files),
+            'lines': total_lines,
+            'size': self._format_size(total_size),
+            'tokens': total_tokens
+        }
+
 # Example usage
 if __name__ == "__main__":
     import argparse
+    from datetime import datetime
     
     parser = argparse.ArgumentParser(description='Collect and process Obsidian links')
     parser.add_argument('start_file', help='Starting file (e.g., "$ Zettelkasten.md")')
     parser.add_argument('--vault', default=os.getcwd(), help='Path to Obsidian vault')
     parser.add_argument('--depth', type=int, default=1, help='Maximum recursion depth')
-    parser.add_argument('--output', help='Output file path')
+    parser.add_argument('--output', help='Output file path (default: temp/aggregate_<notes_title>.txt)')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     
     args = parser.parse_args()
+    
+    # Create default output path if not specified
+    if not args.output:
+        # Extract base name without extension and special characters
+        base_name = os.path.splitext(os.path.basename(args.start_file))[0]
+        base_name = re.sub(r'[$@= ]', '', base_name)  # Remove special characters
+        os.makedirs('temp', exist_ok=True)
+        args.output = f"temp/aggregate_{base_name}.txt"
     
     collector = ObsidianLinkCollector(
         vault_path=args.vault,
@@ -243,20 +265,29 @@ if __name__ == "__main__":
         debug=args.debug
     )
     
+    result = collector.collect_links(args.start_file)
+    
+    # Save to file
+    with open(args.output, 'w', encoding='utf-8') as f:
+        f.write(result)
+    
+    # Print statistics to bash
+    stats = collector.get_statistics()
+    print("\nFile Statistics:")
+    print(f"- Total Files: {stats['files']}")
+    print(f"- Total Lines: {stats['lines']}")
+    print(f"- Total Size: {stats['size']}")
+    print(f"- Total Tokens: {stats['tokens']}")
+    print(f"\nResults saved to: {args.output}")
+    
+    # Copy content to clipboard
     try:
-        result = collector.collect_links(args.start_file)
-        
-        if args.output:
-            with open(args.output, 'w', encoding='utf-8') as f:
-                f.write(result)
-            print(f"Results saved to {args.output}")
-            if args.debug:
-                print(f"Processed {len(collector.visited_files)} files.")
-        else:
-            print(result)
-            
+        import pyperclip
+        with open(args.output, 'r', encoding='utf-8') as f:
+            content = f.read()
+        pyperclip.copy(content)
+        print("Content copied to clipboard!")
+    except ImportError:
+        print("Install 'pyperclip' package to enable clipboard functionality")
     except Exception as e:
-        print(f"Error: {str(e)}")
-        if args.debug:
-            import traceback
-            print(traceback.format_exc())
+        print(f"Failed to copy to clipboard: {str(e)}")
