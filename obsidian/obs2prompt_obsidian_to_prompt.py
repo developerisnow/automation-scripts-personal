@@ -162,6 +162,12 @@ class ObsidianLinkCollector:
         if not filename:
             return None
             
+        # First try direct path match
+        for root, _, files in os.walk(self.vault_path):
+            for file in files:
+                if file == filename or file == filename + '.md':
+                    return os.path.relpath(os.path.join(root, file), self.vault_path)
+
         # Extract the base name (remove prefixes if present)
         base_name = filename
         prefixes = ['$', '@', '=', '$.', '$ ', '$. ']
@@ -171,47 +177,34 @@ class ObsidianLinkCollector:
                 break
 
         # Generate all possible variants
-        variants = []
-        
-        # Original filename variants
-        variants.extend([
+        variants = [
             filename,  # Original as-is
             filename + '.md',
             filename + '🌳.md',
-        ])
-        
-        # Base name variants (without prefix)
-        variants.extend([
             base_name + '.md',
             base_name + '🌳.md',
             base_name.replace(' ', '_') + '.md',
-            base_name.replace(' ', '_') + '🌳.md',
             base_name.replace(' ', '-') + '.md',
-            base_name.replace(' ', '-') + '🌳.md',
-        ])
+        ]
         
-        # Prefix variants
+        # Add prefix variants
         for prefix in prefixes:
-            prefix_variants = [
+            variants.extend([
                 prefix + base_name + '.md',
-                prefix + base_name + '🌳.md',
                 prefix + base_name.replace(' ', '_') + '.md',
-                prefix + base_name.replace(' ', '_') + '🌳.md',
                 prefix + base_name.replace(' ', '-') + '.md',
-                prefix + base_name.replace(' ', '-') + '🌳.md',
-            ]
-            variants.extend(prefix_variants)
+            ])
         
         # Remove duplicates while preserving order
         variants = list(dict.fromkeys(variants))
         
-        for variant in variants:
-            self._debug(f"Trying variant: {variant}")
-            full_path = os.path.join(self.vault_path, variant)
-            if os.path.exists(full_path):
-                self._debug(f"Found existing file: {full_path}")
-                return variant
-                
+        # Search in all subdirectories
+        for root, _, files in os.walk(self.vault_path):
+            for variant in variants:
+                if variant in files:
+                    return os.path.relpath(os.path.join(root, variant), self.vault_path)
+                    
+        self._debug(f"No matching file found for variants: {variants}")
         return None
 
 # Example usage
