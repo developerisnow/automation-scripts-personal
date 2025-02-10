@@ -5,6 +5,26 @@ from collections import defaultdict
 import argparse
 from pathlib import Path
 
+"""
+Naming Convention Prefixes:
+
+Content Source Prefixes:
+    own.    # Self-written content
+    mix.    # Mixed/edited content
+    ai.     # AI-generated content
+
+Content Type Prefixes:
+    =.      # Notes
+    ==.     # Personal notes
+    @.      # People
+    @@.     # Communities
+    {.      # Books
+    (.      # Articles
+    +.      # Videos
+    %.      # Podcasts
+    &.      # Papers/Academic
+"""
+
 def ensure_temp_dir():
     """Create temp directory if it doesn't exist"""
     temp_dir = Path('temp')
@@ -13,7 +33,8 @@ def ensure_temp_dir():
 
 def find_files_with_special_chars_no_space(root_dir):
     # Updated pattern to match both Latin and Cyrillic letters after special chars
-    pattern = re.compile(r'^[@$=]+[a-zA-Zа-яА-ЯёЁ]')
+    # Includes all content type prefixes: =, ==, @, @@, {, (, +, %, &
+    pattern = re.compile(r'^([@$=]{1,2}|\{|\(|\+|\%|\&)[a-zA-Zа-яА-ЯёЁ]')
     
     # List to store matching files
     matching_files = []
@@ -29,8 +50,8 @@ def find_files_with_special_chars_no_space(root_dir):
                 full_path = os.path.join(dirpath, filename)
                 relative_path = os.path.relpath(full_path, root_dir)
                 
-                # Find the special character(s) at the start (updated for better matching)
-                special_chars = re.match(r'^[@$=]+', filename).group()
+                # Find the special character(s) at the start
+                special_chars = re.match(r'^([@$=]{1,2}|\{|\(|\+|\%|\&)+', filename).group()
                 
                 # Store the file info
                 file_info = {
@@ -87,10 +108,20 @@ def rename_matching_files(matching_files, pattern_map=None, clean_options=None):
     if pattern_map is None:
         # Default pattern map: add dot and underscore after special character
         pattern_map = {
+            # Content Type Prefixes
+            '=': '=._',      # Notes
+            '==': '==._',    # Personal notes
+            '@': '@._',      # People
+            '@@': '@@._',    # Communities
+            '{': '{._',      # Books
+            '(': '(._',      # Articles
+            '+': '+._',      # Videos
+            '%': '%._',      # Podcasts
+            '&': '&._',      # Papers/Academic
+            
+            # Legacy/Combined patterns
             '$': '$._',
-            '@': '@._',
-            '=': '=._',
-            '=$': '=$._'  # Add this for combined special chars
+            '=$': '=$._'
         }
     
     renamed_files = []
@@ -186,4 +217,4 @@ def main():
         print("No matching files found.")
 
 if __name__ == "__main__":
-    main() 
+    main()
