@@ -73,60 +73,44 @@ class ObsidianLinkCollector:
             self._debug(f"Error processing {filename}: {str(e)}")
     
     def _generate_output(self) -> str:
-        """Generate formatted output similar to code2prompt style."""
+        """Generate formatted output with statistics and content."""
         if not self.collected_files:
             return "No files processed."
-
-        # Calculate statistics first
-        total_tokens = 0
-        total_lines = 0
-        total_size = 0
-        total_files = len(self.collected_files)
 
         # Sort files by path for consistent output
         self.collected_files.sort(key=lambda x: x[0])
 
-        # Generate content section with all files
-        content_parts = []
-        for file_path, file_content in self.collected_files:
-            rel_path = os.path.relpath(file_path, self.vault_path)
-            total_lines += len(file_content.splitlines())
-            total_size += os.path.getsize(file_path)
-            try:
-                tokens = self._get_token_count(file_path)
-                total_tokens += tokens
-            except Exception as e:
-                self._debug(f"Error getting token count for {file_path}: {str(e)}")
+        # Calculate statistics
+        total_lines = sum(len(content.splitlines()) for _, content in self.collected_files)
+        total_size = sum(os.path.getsize(path) for path, _ in self.collected_files)
+        total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)
 
-            content_parts.append(f"`{rel_path}`:\n```md\n{file_content}\n```\n")
-
-        # Format statistics
-        stats = [
+        # Build output sections
+        sections = [
+            f"Project Path: {self.vault_path}\n",
+            "Source Tree:",
+            "```",
+            self._generate_tree_structure(),
+            "```\n",
             "File Statistics:",
-            f"- Total Files: {total_files}",
+            f"- Total Files: {len(self.collected_files)}",
             f"- Total Lines: {total_lines}",
             f"- Total Size: {self._format_size(total_size)}",
-            f"- Total Tokens: {total_tokens}"
+            f"- Total Tokens: {total_tokens}\n",
+            "Content:"
         ]
 
-        # Generate source tree
-        tree = "Source Tree:\n```\n"
-        tree += self._generate_tree_structure()
-        tree += "\n```"
+        # Add content section
+        for file_path, content in self.collected_files:
+            rel_path = os.path.relpath(file_path, self.vault_path)
+            sections.extend([
+                f"`{rel_path}`:",
+                "```md",
+                content.strip(),
+                "```\n"
+            ])
 
-        # Combine all sections
-        result = [
-            f"Project Path: {self.vault_path}",
-            "",
-            tree,
-            "",
-            "\n".join(stats),  # Add statistics section
-            "",
-            "Content:",
-            "\n".join(content_parts)  # Add all content parts
-        ]
-        
-        return "\n".join(result)
+        return "\n".join(sections)
 
     def _format_size(self, size_bytes: int) -> str:
         """Convert bytes to human readable format."""
@@ -147,18 +131,21 @@ class ObsidianLinkCollector:
         return "\n".join("├── " + line for line in tree_lines[:-1]) + "\n└── " + tree_lines[-1]
 
     def _get_token_count(self, file_path: str) -> int:
-        """Get token count using code2prompt."""
+        """Get token count using code2prompt or estimate."""
         try:
             result = subprocess.run(
-                ["code2prompt", file_path, "--tokens"], 
-                capture_output=True, 
-                text=True
+                ["code2prompt", file_path, "--tokens"],
+                capture_output=True,
+                text=True,
+                timeout=5  # Add timeout
             )
-            # Extract token count from output
             match = re.search(r'Token count: (\d+)', result.stdout)
             return int(match.group(1)) if match else 0
-        except Exception:
-            return 0
+        except Exception as e:
+            self._debug(f"Token count error for {file_path}: {str(e)}")
+            # Fallback: rough estimate based on words
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return len(f.read().split())
 
     def _normalize_filename(self, filename: str) -> Optional[str]:
         """Convert various filename formats to actual file path."""
@@ -218,7 +205,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Collect and process Obsidian links')
     parser.add_argument('start_file', help='Starting file (e.g., "$ Zettelkasten.md")')
     parser.add_argument('--vault', default=os.getcwd(), help='Path to Obsidian vault')
-    parser.add_argument('--depth', type=int, default=2, help='Maximum recursion depth')
+    parser.add_argument('--depth', type=int, default=1, help='Maximum recursion depth')
     parser.add_argument('--output', help='Output file path')
     parser.add_argument('--debug', action='store_true', help='Enable debug logging')
     
@@ -230,13 +217,20 @@ if __name__ == "__main__":
         debug=args.debug
     )
     
-    result = collector.collect_links(args.start_file)
-    
-    if args.output:
-        with open(args.output, 'w', encoding='utf-8') as f:
-            f.write(result)
-        print(f"Results saved to {args.output}")
-    else:
-        print(result)
-    
-    print(f"Processed {len(collector.visited_files)} files.")
+    try:
+        result = collector.collect_links(args.start_file)
+        
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(result)
+            print(f"Results saved to {args.output}")
+            if args.debug:
+                print(f"Processed {len(collector.visited_files)} files.")
+        else:
+            print(result)
+            
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        if args.debug:
+            import traceback
+            print(traceback.format_exc())
