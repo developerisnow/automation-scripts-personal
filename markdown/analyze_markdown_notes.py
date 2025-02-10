@@ -14,6 +14,9 @@
 
 import os
 import csv
+from pathlib import Path
+from collections import defaultdict
+import pandas as pd
 
 # Задайте корневой путь
 ROOT_PATH = "/Users/user/____Sandruk"
@@ -61,87 +64,108 @@ def should_skip_dir(dirpath, ignore_set):
             return True
     return False
 
-def get_markdown_stats(root):
-    # Загружаем паттерны из .scanignore и объединяем с EXCLUDE_DIRS
-    ignore_set = load_scanignore(root).union(EXCLUDE_DIRS)
-
-    folder_stats = {}  # ключ = относительный путь папки, значение = {'kb': ..., 'count': ..., 'lines': ...}
-    file_stats = []    # список статистики по отдельным файлам
-
-    for dirpath, dirnames, filenames in os.walk(root):
-        # Фильтруем подкаталоги: удаляем из списка те, что надо пропустить
-        dirnames[:] = [d for d in dirnames if not should_skip_dir(os.path.join(dirpath, d), ignore_set)]
-        # Если сам текущий каталог нужно пропустить – переход к следующему
-        if should_skip_dir(dirpath, ignore_set):
-            continue
-
-        # Обрабатываем только .md файлы и пропускаем симлинки
-        md_files = [f for f in filenames if f.endswith(".md") and not os.path.islink(os.path.join(dirpath, f))]
-        if not md_files:
-            continue
-
-        rel_folder = os.path.relpath(dirpath, root)
-        total_kb = 0.0
-        total_lines = 0
-        count_files = 0
-
-        for f in md_files:
-            full_path = os.path.join(dirpath, f)
-            try:
-                size_bytes = os.path.getsize(full_path)
-                kb = size_bytes / 1024.0
-            except Exception as e:
-                kb = 0.0
-            num_lines = 0
-            try:
-                with open(full_path, "r", encoding="utf-8") as file:
-                    lines = file.readlines()
-                    num_lines = len(lines)
-            except Exception as e:
-                pass
-
-            total_kb += kb
-            total_lines += num_lines
-            count_files += 1
-
-            # Для списка файлов — берем имя файла, размер, количество строк и последнее имя папки
-            last_folder = os.path.basename(dirpath)
-            file_stats.append({
-                "title": f,
-                "size_kb": kb,
-                "lines": num_lines,
-                "folder": last_folder
-            })
-
-        folder_stats[rel_folder] = {
-            "kb": total_kb,
-            "count": count_files,
-            "lines": total_lines
+def get_file_stats(file_path):
+    """Get statistics for a markdown file"""
+    try:
+        size_kb = os.path.getsize(file_path) / 1024
+        with open(file_path, 'r', encoding='utf-8') as f:
+            lines = len(f.readlines())
+        title = Path(file_path).stem
+        return {
+            'title': title,
+            'size_kb': round(size_kb, 2),
+            'lines': lines,
+            'path': str(file_path)
         }
+    except Exception as e:
+        print(f"Error processing {file_path}: {e}")
+        return None
 
+def analyze_markdown_files(root_dir):
+    """Analyze all markdown files in directory structure"""
+    folder_stats = defaultdict(lambda: {'size': 0, 'files': 0, 'lines': 0})
+    file_stats = []
+    
+    # Walk through directory
+    for dirpath, dirnames, filenames in os.walk(root_dir):
+        # Skip git directories
+        if '.git' in dirpath:
+            continue
+            
+        md_files = [f for f in filenames if f.endswith('.md')]
+        
+        for md_file in md_files:
+            file_path = os.path.join(dirpath, md_file)
+            
+            # Skip symlinks
+            if os.path.islink(file_path):
+                continue
+                
+            stats = get_file_stats(file_path)
+            if stats:
+                # Add to file stats
+                file_stats.append(stats)
+                
+                # Add to folder stats
+                folder = dirpath
+                folder_stats[folder]['size'] += stats['size_kb']
+                folder_stats[folder]['files'] += 1
+                folder_stats[folder]['lines'] += stats['lines']
+    
     return folder_stats, file_stats
 
-def write_folder_report(folder_stats, filename="markdown-notes-by-folders.csv"):
-    with open(filename, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["folder", "kb size md files", "number of md files", "number total lines of markdown files"])
-        for folder, stats in sorted(folder_stats.items()):
-            writer.writerow([folder, f"{stats['kb']:.2f}", stats['count'], stats['lines']])
-    print(f"Файл {filename} записан.")
+def save_folder_report(folder_stats, output_file):
+    """Save folder statistics report"""
+    with open(output_file, 'w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(['folder', 'kb size md files', 'number of md files', 'number total lines of markdown files'])
+        
+        for folder, stats in folder_stats.items():
+            writer.writerow([
+                folder,
+                round(stats['size'], 2),
+                stats['files'],
+                stats['lines']
+            ])
 
-def write_top_files_report(file_stats, filename="md-notes-list-top-200.csv", top_n=200):
-    # Сортируем файлы по размеру (от большего к меньшему)
-    file_stats_sorted = sorted(file_stats, key=lambda x: x["size_kb"], reverse=True)
-    top_files = file_stats_sorted[:top_n]
+def save_files_report(file_stats, output_file, limit=200):
+    """Save top files statistics report"""
+    # Convert to DataFrame for easier sorting
+    df = pd.DataFrame(file_stats)
+    
+    # Sort by size and get top files
+    top_files = df.nlargest(limit, 'size_kb')
+    
+    # Extract folder name from path
+    top_files['folder'] = top_files['path'].apply(lambda x: os.path.basename(os.path.dirname(x)))
+    
+    # Save report
+    top_files[['title', 'size_kb', 'lines', 'folder']].to_csv(
+        output_file, 
+        index=False
+    )
 
-    with open(filename, "w", newline="", encoding="utf-8") as csvfile:
-        writer = csv.writer(csvfile)
-        writer.writerow(["title", "size kb", "lines", "folder path(only last)"])
-        for f in top_files:
-            writer.writerow([f["title"], f"{f['size_kb']:.2f}", f["lines"], f["folder"]])
-    print(f"Файл {filename} записан.")
+def main():
+    root_dir = '/Users/user/____Sandruk'
+    
+    print("Analyzing markdown files...")
+    folder_stats, file_stats = analyze_markdown_files(root_dir)
+    
+    print("Saving folder report...")
+    save_folder_report(folder_stats, 'markdown-notes-by-folders.csv')
+    
+    print("Saving files report...")
+    save_files_report(file_stats, 'md-notes-list-top-200.csv')
+    
+    # Print summary
+    total_files = sum(stats['files'] for stats in folder_stats.values())
+    total_size = sum(stats['size'] for stats in folder_stats.values())
+    total_lines = sum(stats['lines'] for stats in folder_stats.values())
+    
+    print("\nSummary:")
+    print(f"Total markdown files: {total_files}")
+    print(f"Total size: {round(total_size/1024, 2)} MB")
+    print(f"Total lines: {total_lines}")
 
 if __name__ == "__main__":
-    folders, files = get_markdown_stats(ROOT_PATH)
-    write_folder_report(folders)
-    write_top_files_report(files) 
+    main() 
