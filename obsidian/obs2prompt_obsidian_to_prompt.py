@@ -72,6 +72,23 @@ class ObsidianLinkCollector:
         except Exception as e:
             self._debug(f"Error processing {filename}: {str(e)}")
     
+    def _format_tree(self, paths: list[str]) -> list[str]:
+        """Format paths as a tree structure."""
+        if not paths:
+            return []
+            
+        paths.sort()
+        result = []
+        
+        for i, path in enumerate(paths):
+            if i == len(paths) - 1:
+                prefix = "└── "
+            else:
+                prefix = "├── "
+            result.append(prefix + path)
+            
+        return result
+
     def _generate_output(self) -> str:
         """Generate formatted output with statistics and content."""
         if not self.collected_files:
@@ -83,7 +100,7 @@ class ObsidianLinkCollector:
         # Calculate statistics
         total_lines = sum(len(content.splitlines()) for _, content in self.collected_files)
         total_size = sum(os.path.getsize(path) for path, _ in self.collected_files)
-        total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)
+        total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)  # Fixed method name
 
         # Build output sections
         sections = [
@@ -100,15 +117,18 @@ class ObsidianLinkCollector:
             "Content:"
         ]
 
-        # Add content section
+        # Add content section with proper error handling
         for file_path, content in self.collected_files:
-            rel_path = os.path.relpath(file_path, self.vault_path)
-            sections.extend([
-                f"`{rel_path}`:",
-                "```md",
-                content.strip(),
-                "```\n"
-            ])
+            try:
+                rel_path = os.path.relpath(file_path, self.vault_path)
+                sections.extend([
+                    f"`{rel_path}`:",
+                    "```md",
+                    content.strip(),
+                    "```\n"
+                ])
+            except Exception as e:
+                self._debug(f"Error processing content for {file_path}: {str(e)}")
 
         return "\n".join(sections)
 
@@ -137,15 +157,21 @@ class ObsidianLinkCollector:
                 ["code2prompt", file_path, "--tokens"],
                 capture_output=True,
                 text=True,
-                timeout=5  # Add timeout
+                timeout=5
             )
             match = re.search(r'Token count: (\d+)', result.stdout)
-            return int(match.group(1)) if match else 0
+            if match:
+                return int(match.group(1))
         except Exception as e:
             self._debug(f"Token count error for {file_path}: {str(e)}")
-            # Fallback: rough estimate based on words
+        
+        # Fallback: rough estimate based on words
+        try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 return len(f.read().split())
+        except Exception as e:
+            self._debug(f"Fallback token count error for {file_path}: {str(e)}")
+            return 0
 
     def _normalize_filename(self, filename: str) -> Optional[str]:
         """Convert various filename formats to actual file path."""
