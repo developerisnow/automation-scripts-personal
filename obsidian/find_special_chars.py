@@ -2,10 +2,18 @@ import os
 import re
 import csv
 from collections import defaultdict
+import argparse
+from pathlib import Path
+
+def ensure_temp_dir():
+    """Create temp directory if it doesn't exist"""
+    temp_dir = Path('temp')
+    temp_dir.mkdir(exist_ok=True)
+    return temp_dir
 
 def find_files_with_special_chars_no_space(root_dir):
-    # Pattern to match: special character immediately followed by text (no dot or space)
-    pattern = re.compile(r'^[@$=]+[a-zA-Z]')
+    # Updated pattern to match both Latin and Cyrillic letters after special chars
+    pattern = re.compile(r'^[@$=]+[a-zA-Zа-яА-ЯёЁ]')
     
     # List to store matching files
     matching_files = []
@@ -21,13 +29,14 @@ def find_files_with_special_chars_no_space(root_dir):
                 full_path = os.path.join(dirpath, filename)
                 relative_path = os.path.relpath(full_path, root_dir)
                 
-                # Find the special character(s) at the start
+                # Find the special character(s) at the start (updated for better matching)
                 special_chars = re.match(r'^[@$=]+', filename).group()
                 
                 # Store the file info
                 file_info = {
                     'filename': filename,
                     'path': relative_path,
+                    'full_path': full_path,
                     'special_chars': special_chars,
                     'rule': 'Special character immediately followed by letter (no dot/space)'
                 }
@@ -37,8 +46,10 @@ def find_files_with_special_chars_no_space(root_dir):
     
     return matching_files, char_stats
 
-def write_csv_report(matching_files, output_file='statistic_special_chars_rules.csv'):
-    # Write results to CSV
+def write_csv_report(matching_files, output_dir):
+    """Write results to CSV in temp directory"""
+    output_file = output_dir / 'statistic_special_chars_rules.csv'
+    
     with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
         fieldnames = ['filename', 'special_character', 'rule', 'pathoffile']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -51,19 +62,98 @@ def write_csv_report(matching_files, output_file='statistic_special_chars_rules.
                 'rule': file['rule'],
                 'pathoffile': file['path']
             })
+    return output_file
+
+def clean_filename(filename, clean_options):
+    """Clean filename based on specified options"""
+    if not clean_options:
+        return filename
+        
+    new_filename = filename
+    options = clean_options.lower().split(',')
+    
+    if 'kebab' in options:
+        # Replace multiple whitespaces with single hyphen
+        new_filename = re.sub(r'\s+', '-', new_filename)
+        
+    if 'quote' in options:
+        # Remove single quotes, double quotes, and smart quotes
+        new_filename = re.sub(r'[\'"""'']', '', new_filename)
+    
+    return new_filename
+
+def rename_matching_files(matching_files, pattern_map=None, clean_options=None):
+    """Rename files according to pattern map and cleaning options"""
+    if pattern_map is None:
+        # Default pattern map: add dot and underscore after special character
+        pattern_map = {
+            '$': '$._',
+            '@': '@._',
+            '=': '=._',
+            '=$': '=$._'  # Add this for combined special chars
+        }
+    
+    renamed_files = []
+    for file in matching_files:
+        old_path = file['full_path']
+        filename = file['filename']
+        special_chars = file['special_chars']
+        
+        # First apply special character pattern
+        if special_chars in pattern_map:
+            new_filename = filename.replace(special_chars, pattern_map[special_chars], 1)
+            
+            # Then apply cleaning if requested
+            if clean_options:
+                new_filename = clean_filename(new_filename, clean_options)
+            
+            new_path = os.path.join(os.path.dirname(old_path), new_filename)
+            
+            print(f"DEBUG: Attempting to rename:")
+            print(f"  Old filename: {filename}")
+            print(f"  New filename: {new_filename}")
+            print(f"  Special chars: {special_chars}")
+            print(f"  Clean options: {clean_options}")
+            
+            if old_path != new_path:  # Only rename if the path would change
+                try:
+                    os.rename(old_path, new_path)
+                    renamed_files.append({
+                        'old': old_path,
+                        'new': new_path
+                    })
+                    print(f"  Success: Renamed to {new_filename}")
+                except OSError as e:
+                    print(f"  Error renaming {old_path}: {e}")
+            else:
+                print("  No change needed - filenames are identical")
+    
+    return renamed_files
 
 def main():
-    # Get current directory
-    root_dir = os.getcwd()
+    # Set up argument parser
+    parser = argparse.ArgumentParser(description='Find and process files with special characters')
+    parser.add_argument('--path', type=str, default=os.getcwd(),
+                       help='Root directory to search (default: current directory)')
+    parser.add_argument('--rename', action='store_true',
+                       help='Rename matching files according to pattern')
+    parser.add_argument('--clean', type=str,
+                       help='Clean filenames: "kebab" for converting spaces to hyphens, '
+                            '"quote" for removing quotes. Can combine with comma: "kebab,quote"')
+    
+    args = parser.parse_args()
+    root_dir = args.path
+    
+    # Ensure temp directory exists
+    temp_dir = ensure_temp_dir()
     
     # Find matching files and get statistics
     matches, char_stats = find_files_with_special_chars_no_space(root_dir)
     
     # Write CSV report
-    write_csv_report(matches)
-    
-    # Print results
     if matches:
+        output_file = write_csv_report(matches, temp_dir)
+        
         print("Found files with special characters immediately followed by text:")
         print("-" * 80)
         
@@ -83,7 +173,15 @@ def main():
             print(f"Rule: {file['rule']}")
             print("-" * 80)
         
-        print(f"\nResults have been saved to 'statistic_special_chars_rules.csv'")
+        print(f"\nResults have been saved to '{output_file}'")
+        
+        # Rename files if requested
+        if args.rename:
+            renamed = rename_matching_files(matches, clean_options=args.clean)
+            if renamed:
+                print("\nRenamed files:")
+                for file in renamed:
+                    print(f"  {file['old']} -> {file['new']}")
     else:
         print("No matching files found.")
 
