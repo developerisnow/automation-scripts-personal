@@ -4,7 +4,7 @@ import subprocess
 from typing import Set, Dict, Optional, List, Tuple
 
 class ObsidianLinkCollector:
-    def __init__(self, vault_path: str = None, max_depth: int = 2, debug: bool = False):
+    def __init__(self, vault_path: str = None, max_depth: int = 1, debug: bool = False):
         """Initialize the collector with vault path and options."""
         if vault_path is None:
             # Default to ./references/obsidian
@@ -83,14 +83,22 @@ class ObsidianLinkCollector:
         total_size = 0
         total_files = len(self.collected_files)
 
+        # Sort files by path for consistent output
+        self.collected_files.sort(key=lambda x: x[0])
+
+        # Generate content section with all files
+        content_parts = []
         for file_path, file_content in self.collected_files:
+            rel_path = os.path.relpath(file_path, self.vault_path)
             total_lines += len(file_content.splitlines())
             total_size += os.path.getsize(file_path)
             try:
                 tokens = self._get_token_count(file_path)
                 total_tokens += tokens
             except Exception as e:
-                print(f"Error getting token count for {file_path}: {str(e)}")
+                self._debug(f"Error getting token count for {file_path}: {str(e)}")
+
+            content_parts.append(f"`{rel_path}`:\n```md\n{file_content}\n```\n")
 
         # Format statistics
         stats = [
@@ -102,24 +110,20 @@ class ObsidianLinkCollector:
         ]
 
         # Generate source tree
-        tree = "Source Tree:\n\n```\n"
+        tree = "Source Tree:\n```\n"
         tree += self._generate_tree_structure()
-        tree += "```\n\n"
-
-        # Generate file contents
-        content = "Content:\n\n"
-        for file_path, file_content in self.collected_files:
-            rel_path = os.path.relpath(file_path, self.vault_path)
-            content += f"`{rel_path}`:\n\n```md\n{file_content}\n```\n\n"
+        tree += "\n```"
 
         # Combine all sections
         result = [
-            f"Project Path: {os.path.basename(self.vault_path)}",
+            f"Project Path: {self.vault_path}",
             "",
             tree,
+            "",
             "\n".join(stats),  # Add statistics section
             "",
-            content
+            "Content:",
+            "\n".join(content_parts)  # Add all content parts
         ]
         
         return "\n".join(result)
