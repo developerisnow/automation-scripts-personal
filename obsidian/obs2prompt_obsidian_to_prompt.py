@@ -16,6 +16,7 @@ class ObsidianLinkCollector:
         self.debug_enabled = debug
         self.visited_files = set()
         self.collected_files: List[Tuple[str, str]] = []  # [(file_path, content)]
+        self.start_file = None  # Store start file name
         # Match both [[link]] and [[@link]] patterns
         self.link_pattern = re.compile(r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]')
         
@@ -25,6 +26,7 @@ class ObsidianLinkCollector:
 
     def collect_links(self, start_file: str) -> str:
         """Main entry point to collect content from a starting file."""
+        self.start_file = start_file  # Store start file name
         self._process_file(start_file, current_depth=0)
         return self._generate_output()
     
@@ -94,13 +96,14 @@ class ObsidianLinkCollector:
         if not self.collected_files:
             return "No files processed."
 
-        # Sort files by path for consistent output
-        self.collected_files.sort(key=lambda x: x[0])
+        # Sort files, but ensure start file is first
+        start_file_path = os.path.join(self.vault_path, self._normalize_filename(self.start_file))
+        self.collected_files.sort(key=lambda x: (x[0] != start_file_path, x[0]))
 
         # Calculate statistics
         total_lines = sum(len(content.splitlines()) for _, content in self.collected_files)
         total_size = sum(os.path.getsize(path) for path, _ in self.collected_files)
-        total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)  # Fixed method name
+        total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)
 
         # Build output sections
         sections = [
