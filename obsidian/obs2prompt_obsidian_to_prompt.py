@@ -17,8 +17,8 @@ class ObsidianLinkCollector:
         self.visited_files = set()
         self.collected_files: List[Tuple[str, str]] = []  # [(file_path, content)]
         self.start_file = None  # Store start file name
-        # Match both [[link]] and [[@link]] patterns
-        self.link_pattern = re.compile(r'\[\[([^\]|]+)(?:\|[^\]]+)?\]\]')
+        # Updated pattern to properly handle links with pipe symbol
+        self.link_pattern = re.compile(r'\[\[([^|\]]+)(?:\|[^\]]+)?\]\]')
         
     def _debug(self, msg: str):
         if self.debug_enabled:
@@ -38,13 +38,23 @@ class ObsidianLinkCollector:
             self._debug(f"Max depth reached for {filename}")
             return
             
-        # Don't strip prefixes from the original filename
-        norm_filename = self._normalize_filename(filename)
-        if not norm_filename:
-            self._debug(f"Could not normalize filename: {filename}")
-            return
+        # Handle full paths in wiki-links
+        if '/' in filename:
+            # Extract just the filename part for normalization
+            base_filename = os.path.basename(filename)
+            # Use the directory part as-is
+            dir_part = os.path.dirname(filename)
+            file_path = os.path.join(self.vault_path, dir_part, base_filename)
+            if not file_path.endswith('.md'):
+                file_path += '.md'
+        else:
+            # Original normalization for simple filenames
+            norm_filename = self._normalize_filename(filename)
+            if not norm_filename:
+                self._debug(f"Could not normalize filename: {filename}")
+                return
+            file_path = os.path.join(self.vault_path, norm_filename)
             
-        file_path = os.path.join(self.vault_path, norm_filename)
         self._debug(f"Full file path: {file_path}")
         
         if file_path in self.visited_files:
@@ -63,7 +73,12 @@ class ObsidianLinkCollector:
                 self._debug(f"Successfully read file: {file_path}")
                 self.collected_files.append((file_path, content))
             
-            links = self.link_pattern.findall(content)
+            # Extract links, handling both parts of piped links
+            links = []
+            for match in self.link_pattern.finditer(content):
+                link = match.group(1)  # This gets the part before the pipe
+                links.append(link)
+                
             self._debug(f"Found links in {filename}: {links}")
             
             if current_depth < self.max_depth:

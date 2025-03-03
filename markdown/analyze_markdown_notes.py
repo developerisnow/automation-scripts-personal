@@ -1,171 +1,192 @@
 #!/usr/bin/env python3
 """
-Скрипт для анализа Markdown заметок в каталоге /Users/user/____Sandruk
-
-Генерирует два CSV отчёта:
-1. markdown-notes-by-folders.csv: для каждой папки (с учётом игнорирования каталогов из .scanignore,
-   скрытых папок, .obsidian, node_modules, симлинков и указанных в EXCLUDE_DIRS):
-     - folder, kb size md files, number of md files, number total lines of markdown files
-2. md-notes-list-top-200.csv: топ 200 заметок (по размеру) со столбцами:
-   - title, size kb, lines, folder path(only last)
-
-Прочие варианты отчётов можно добавить позже.
+Script to analyze markdown files in _inputs directories and generate a CSV report.
+This is the analysis phase of the markdown note reorganization project.
 """
 
 import os
 import csv
+import datetime
+import argparse
+import re
 from pathlib import Path
-from collections import defaultdict
-import pandas as pd
 
-# Задайте корневой путь
-ROOT_PATH = "/Users/user/____Sandruk"
+# Regular expression to detect existing date patterns in filenames
+DATE_PATTERN_REGEX = re.compile(r'^(\d{4}-\d{2}-\d{2}|\d{4}-\d{2}-\d{2}-\d{4})')
 
-# Список подстрок для исключения (старый список)
-EXCLUDE_DIRS = {"__Repositories", "__Vaults_Databases", "__Templates", "renamed", "symlink"}
-
-def load_scanignore(root):
-    """
-    Загружает паттерны игнорирования из файла .scanignore.
-    Если файла нет – создаёт его с дефолтными значениями.
-    """
-    scanignore_file = os.path.join(root, ".scanignore")
-    defaults = {".obsidian", "node_modules"}
-    patterns = set()
-    if os.path.exists(scanignore_file):
-        with open(scanignore_file, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#"):
-                    patterns.add(line)
-    else:
-        # Файл отсутствует – создаём с дефолтными значениями
-        patterns = defaults.copy()
-        with open(scanignore_file, "w", encoding="utf-8") as f:
-            for pattern in defaults:
-                f.write(pattern + "\n")
-        print(f"Создан дефолтный файл {scanignore_file}")
-    return patterns
-
-def should_skip_dir(dirpath, ignore_set):
-    """Проверяет, следует ли пропустить каталог.
-
-    Критерии:
-    - если базовое имя начинается с точки (скрытый каталог);
-    - если хотя бы один сегмент пути точно совпадает с элементом ignore_set;
-    """
-    base = os.path.basename(dirpath)
-    if base.startswith('.') and base != '.':
-        return True
-    # Разбиваем путь и проверяем каждую его часть
-    parts = os.path.normpath(dirpath).split(os.sep)
-    for part in parts:
-        if part in ignore_set:
-            return True
-    return False
-
-def get_file_stats(file_path):
-    """Get statistics for a markdown file"""
-    try:
-        size_kb = os.path.getsize(file_path) / 1024
-        with open(file_path, 'r', encoding='utf-8') as f:
-            lines = len(f.readlines())
-        title = Path(file_path).stem
-        return {
-            'title': title,
-            'size_kb': round(size_kb, 2),
-            'lines': lines,
-            'path': str(file_path)
-        }
-    except Exception as e:
-        print(f"Error processing {file_path}: {e}")
+def get_file_info(file_path):
+    """Get information about a file."""
+    # Skip symlinks
+    if os.path.islink(file_path):
         return None
-
-def analyze_markdown_files(root_dir):
-    """Analyze all markdown files in directory structure"""
-    folder_stats = defaultdict(lambda: {'size': 0, 'files': 0, 'lines': 0})
-    file_stats = []
-    
-    # Walk through directory
-    for dirpath, dirnames, filenames in os.walk(root_dir):
-        # Skip git directories
-        if '.git' in dirpath:
-            continue
-            
-        md_files = [f for f in filenames if f.endswith('.md')]
         
-        for md_file in md_files:
-            file_path = os.path.join(dirpath, md_file)
-            
-            # Skip symlinks
-            if os.path.islink(file_path):
-                continue
-                
-            stats = get_file_stats(file_path)
-            if stats:
-                # Add to file stats
-                file_stats.append(stats)
-                
-                # Add to folder stats
-                folder = dirpath
-                folder_stats[folder]['size'] += stats['size_kb']
-                folder_stats[folder]['files'] += 1
-                folder_stats[folder]['lines'] += stats['lines']
-    
-    return folder_stats, file_stats
-
-def save_folder_report(folder_stats, output_file):
-    """Save folder statistics report"""
-    with open(output_file, 'w', newline='', encoding='utf-8') as f:
-        writer = csv.writer(f)
-        writer.writerow(['folder', 'kb size md files', 'number of md files', 'number total lines of markdown files'])
+    # Check if file exists
+    if not os.path.exists(file_path):
+        return None
         
-        for folder, stats in folder_stats.items():
-            writer.writerow([
-                folder,
-                round(stats['size'], 2),
-                stats['files'],
-                stats['lines']
-            ])
+    stat = os.stat(file_path)
+    created_time = datetime.datetime.fromtimestamp(stat.st_ctime)
+    modified_time = datetime.datetime.fromtimestamp(stat.st_mtime)
+    
+    # Count lines in the file
+    with open(file_path, 'r', encoding='utf-8', errors='replace') as f:
+        try:
+            line_count = sum(1 for _ in f)
+        except UnicodeDecodeError:
+            line_count = -1  # Indicate error in reading
+        except Exception as e:
+            print(f"Error reading file {file_path}: {e}")
+            line_count = -1
+    
+    # Calculate size in KB
+    size_kb = stat.st_size / 1024
+    
+    return {
+        'filename': os.path.basename(file_path),
+        'lines': line_count,
+        'size_kb': round(size_kb, 2),
+        'created': created_time.strftime('%Y-%m-%d %H:%M:%S'),
+        'modified': modified_time.strftime('%Y-%m-%d %H:%M:%S'),
+        'path': file_path
+    }
 
-def save_files_report(file_stats, output_file, limit=200):
-    """Save top files statistics report"""
-    # Convert to DataFrame for easier sorting
-    df = pd.DataFrame(file_stats)
+def find_markdown_files(base_dir, pattern="_inputs"):
+    """Find all markdown files in directories matching the pattern."""
+    markdown_files = []
+    symlinks_found = []
     
-    # Sort by size and get top files
-    top_files = df.nlargest(limit, 'size_kb')
+    for root, dirs, files in os.walk(base_dir):
+        # Check if the current directory path contains the pattern
+        if pattern in root:
+            for file in files:
+                if file.lower().endswith('.md'):
+                    file_path = os.path.join(root, file)
+                    
+                    # Check if it's a symlink
+                    if os.path.islink(file_path):
+                        symlinks_found.append(file_path)
+                        continue
+                        
+                    # Skip if file doesn't exist (broken link or other issue)
+                    if not os.path.exists(file_path):
+                        continue
+                        
+                    markdown_files.append(file_path)
     
-    # Extract folder name from path
-    top_files['folder'] = top_files['path'].apply(lambda x: os.path.basename(os.path.dirname(x)))
+    return markdown_files, symlinks_found
+
+def extract_project_folder_name(file_path, pattern="_inputs"):
+    """Extract the project folder name from the file path."""
+    # Convert to Path object for easier manipulation
+    path = Path(file_path)
     
-    # Save report
-    top_files[['title', 'size_kb', 'lines', 'folder']].to_csv(
-        output_file, 
-        index=False
-    )
+    # Find the _inputs part of the path
+    inputs_index = -1
+    for i, part in enumerate(path.parts):
+        if pattern in part:
+            inputs_index = i
+            break
+    
+    if inputs_index > 0:
+        # Get the parent folder of _inputs
+        project_folder = path.parts[inputs_index-1]
+        # Remove leading underscores
+        if project_folder.startswith('_'):
+            project_folder = project_folder.lstrip('_')
+        
+        return project_folder
+    
+    return "Unknown"
+
+def has_date_pattern(filename):
+    """Check if filename already has a date pattern at the beginning."""
+    return bool(DATE_PATTERN_REGEX.match(filename))
+
+def generate_new_filename(file_info, project_folder):
+    """Generate new filename based on requirements."""
+    original_filename = file_info['filename']
+    
+    # Remove file extension for processing
+    basename = os.path.splitext(original_filename)[0]
+    
+    # Check if filename already starts with a date pattern
+    if has_date_pattern(basename):
+        # If it already has a date pattern, don't add another one
+        new_filename = f"{basename}__{project_folder}.md"
+    else:
+        # Extract creation date and time
+        created_dt = datetime.datetime.strptime(file_info['created'], '%Y-%m-%d %H:%M:%S')
+        date_part = created_dt.strftime('%Y-%m-%d-%H%M')
+        
+        # Format: YYYY-MM-DD-hhmm-<title>__<project-foldername>.md
+        new_filename = f"{date_part}-{basename}__{project_folder}.md"
+    
+    return new_filename
+
+def log_symlinks(symlinks_found, log_file="symlinks_skipped.log"):
+    """Log symlinks that were skipped."""
+    with open(log_file, 'w', encoding='utf-8') as f:
+        f.write(f"Found {len(symlinks_found)} symlinks that were skipped:\n\n")
+        for link in symlinks_found:
+            try:
+                target = os.readlink(link)
+                f.write(f"{link} -> {target}\n")
+            except:
+                f.write(f"{link} (could not resolve target)\n")
 
 def main():
-    root_dir = '/Users/user/____Sandruk'
+    parser = argparse.ArgumentParser(description='Analyze markdown files in _inputs directories.')
+    parser.add_argument('--base-dir', type=str, required=True, 
+                      help='Base directory to start the search from')
+    parser.add_argument('--output', type=str, default='markdown_files_analysis.csv',
+                      help='Output CSV file name')
+    parser.add_argument('--pattern', type=str, default='_inputs',
+                      help='Pattern to match in directory names')
+    parser.add_argument('--symlinks-log', type=str, default='symlinks_skipped.log',
+                      help='Log file for skipped symlinks')
     
-    print("Analyzing markdown files...")
-    folder_stats, file_stats = analyze_markdown_files(root_dir)
+    args = parser.parse_args()
     
-    print("Saving folder report...")
-    save_folder_report(folder_stats, 'markdown-notes-by-folders.csv')
+    base_dir = args.base_dir
+    output_file = args.output
+    pattern = args.pattern
+    symlinks_log = args.symlinks_log
     
-    print("Saving files report...")
-    save_files_report(file_stats, 'md-notes-list-top-200.csv')
+    print(f"Searching for markdown files in {base_dir} with pattern '{pattern}'...")
     
-    # Print summary
-    total_files = sum(stats['files'] for stats in folder_stats.values())
-    total_size = sum(stats['size'] for stats in folder_stats.values())
-    total_lines = sum(stats['lines'] for stats in folder_stats.values())
+    # Find all markdown files and symlinks
+    markdown_files, symlinks_found = find_markdown_files(base_dir, pattern)
     
-    print("\nSummary:")
-    print(f"Total markdown files: {total_files}")
-    print(f"Total size: {round(total_size/1024, 2)} MB")
-    print(f"Total lines: {total_lines}")
+    print(f"Found {len(markdown_files)} markdown files.")
+    print(f"Skipped {len(symlinks_found)} symlinks.")
+    
+    # Log symlinks that were skipped
+    log_symlinks(symlinks_found, symlinks_log)
+    print(f"Symlinks logged to {symlinks_log}")
+    
+    # Get information for each file and generate proposed new filename
+    file_info_list = []
+    for file_path in markdown_files:
+        info = get_file_info(file_path)
+        if info:  # Skip if info is None (e.g., file is a symlink or doesn't exist)
+            project_folder = extract_project_folder_name(file_path, pattern)
+            new_filename = generate_new_filename(info, project_folder)
+            
+            info['project_folder'] = project_folder
+            info['new_filename'] = new_filename
+            file_info_list.append(info)
+    
+    # Write to CSV
+    with open(output_file, 'w', newline='', encoding='utf-8') as csvfile:
+        fieldnames = ['filename', 'lines', 'size_kb', 'created', 'modified', 'path', 'project_folder', 'new_filename']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        writer.writeheader()
+        for info in file_info_list:
+            writer.writerow(info)
+    
+    print(f"Analysis complete. Results written to {output_file}")
+    print(f"Files to process: {len(file_info_list)}")
 
 if __name__ == "__main__":
     main() 

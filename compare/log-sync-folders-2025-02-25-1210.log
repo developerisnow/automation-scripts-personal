@@ -1,0 +1,164 @@
+2025-02-25 12:10:17,943 - INFO - Starting folder synchronization
+2025-02-25 12:10:17,944 - INFO - Main folder: /Users/user/__Repositories
+2025-02-25 12:10:17,944 - INFO - Duplicate folders: ['/Users/user/__Repositories0', '/Users/user/__Repositories1']
+2025-02-25 12:10:17,944 - INFO - Comparison CSV: /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/compare/compare_folders-2025-02-25-1202.csv
+2025-02-25 12:10:17,944 - INFO - Found 50 folders to sync from /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/compare/compare_folders-2025-02-25-1202.csv
+2025-02-25 12:10:17,944 - INFO - Processing folder: crypto-wallets-Money-tools-binance-gen (Reason: newer)
+2025-02-25 12:10:17,945 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-wallets-Money-tools-binance-gen
+2025-02-25 12:10:17,967 - INFO - Successfully synchronized: /Users/user/__Repositories0/crypto-wallets-Money-tools-binance-gen -> /Users/user/__Repositories/crypto-wallets-Money-tools-binance-gen
+2025-02-25 12:10:17,967 - INFO - Processing folder: crypto-drop-checkers (Reason: larger)
+2025-02-25 12:10:17,967 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-drop-checkers
+2025-02-25 12:10:27,801 - INFO - Successfully synchronized: /Users/user/__Repositories0/crypto-drop-checkers -> /Users/user/__Repositories/crypto-drop-checkers
+2025-02-25 12:10:27,801 - INFO - Processing folder: second-brain-based-on-awesome-nest-boilerplate__NarHakobyan (Reason: newer)
+2025-02-25 12:10:27,801 - INFO - Updating existing folder: /Users/user/__Repositories/second-brain-based-on-awesome-nest-boilerplate__NarHakobyan
+2025-02-25 12:10:27,866 - INFO - Successfully synchronized: /Users/user/__Repositories0/second-brain-based-on-awesome-nest-boilerplate__NarHakobyan -> /Users/user/__Repositories/second-brain-based-on-awesome-nest-boilerplate__NarHakobyan
+2025-02-25 12:10:27,866 - INFO - Processing folder: crypto-Twitter-Multi-Actions (Reason: newer)
+2025-02-25 12:10:27,866 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-Twitter-Multi-Actions
+2025-02-25 12:10:27,881 - INFO - Successfully synchronized: /Users/user/__Repositories0/crypto-Twitter-Multi-Actions -> /Users/user/__Repositories/crypto-Twitter-Multi-Actions
+2025-02-25 12:10:27,881 - INFO - Processing folder: blockchainwave-html-api-scrapping (Reason: larger)
+2025-02-25 12:10:27,882 - INFO - Updating existing folder: /Users/user/__Repositories/blockchainwave-html-api-scrapping
+2025-02-25 12:10:27,941 - INFO - Successfully synchronized: /Users/user/__Repositories0/blockchainwave-html-api-scrapping -> /Users/user/__Repositories/blockchainwave-html-api-scrapping
+2025-02-25 12:10:27,941 - INFO - Processing folder: crypto-eth-wallet-notify (Reason: newer)
+2025-02-25 12:10:27,941 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-eth-wallet-notify
+2025-02-25 12:10:27,963 - INFO - Successfully synchronized: /Users/user/__Repositories0/crypto-eth-wallet-notify -> /Users/user/__Repositories/crypto-eth-wallet-notify
+2025-02-25 12:10:27,963 - INFO - Processing folder: crypto-wallets-Generate-EVMs-And-Check-Balances (Reason: newer)
+2025-02-25 12:10:27,963 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-wallets-Generate-EVMs-And-Check-Balances
+2025-02-25 12:10:27,985 - INFO - Successfully synchronized: /Users/user/__Repositories0/crypto-wallets-Generate-EVMs-And-Check-Balances -> /Users/user/__Repositories/crypto-wallets-Generate-EVMs-And-Check-Balances
+2025-02-25 12:10:27,985 - INFO - Processing folder: LLMs-airpg__belbix-master-week6-1 (Reason: newer)
+2025-02-25 12:10:27,985 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-airpg__belbix-master-week6-1
+2025-02-25 12:10:28,022 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-airpg__belbix-master-week6-1 -> /Users/user/__Repositories/LLMs-airpg__belbix-master-week6-1
+2025-02-25 12:10:28,022 - INFO - Processing folder: crypto-exchange-cex-cex-all-in-one-withdrawal (Reason: newer)
+2025-02-25 12:10:28,022 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-exchange-cex-cex-all-in-one-withdrawal
+2025-02-25 12:10:28,040 - INFO - Successfully synchronized: /Users/user/__Repositories0/crypto-exchange-cex-cex-all-in-one-withdrawal -> /Users/user/__Repositories/crypto-exchange-cex-cex-all-in-one-withdrawal
+2025-02-25 12:10:28,040 - INFO - Processing folder: second-brain-based-on-nestjs-boilerplate__brocoders (Reason: newer)
+2025-02-25 12:10:28,040 - INFO - Updating existing folder: /Users/user/__Repositories/second-brain-based-on-nestjs-boilerplate__brocoders
+2025-02-25 12:10:28,205 - INFO - Successfully synchronized: /Users/user/__Repositories0/second-brain-based-on-nestjs-boilerplate__brocoders -> /Users/user/__Repositories/second-brain-based-on-nestjs-boilerplate__brocoders
+2025-02-25 12:10:28,205 - INFO - Processing folder: LLMs-chatgpt-backup__abacaj (Reason: newer)
+2025-02-25 12:10:28,205 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-chatgpt-backup__abacaj
+2025-02-25 12:10:28,227 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-chatgpt-backup__abacaj -> /Users/user/__Repositories/LLMs-chatgpt-backup__abacaj
+2025-02-25 12:10:28,227 - INFO - Processing folder: obsidian-telegram-sync__soberhacker_test (Reason: newer)
+2025-02-25 12:10:28,228 - INFO - Updating existing folder: /Users/user/__Repositories/obsidian-telegram-sync__soberhacker_test
+2025-02-25 12:10:28,265 - INFO - Successfully synchronized: /Users/user/__Repositories0/obsidian-telegram-sync__soberhacker_test -> /Users/user/__Repositories/obsidian-telegram-sync__soberhacker_test
+2025-02-25 12:10:28,265 - INFO - Processing folder: nestjs-prisma-starter-boilerplate__notiz-dev (Reason: newer)
+2025-02-25 12:10:28,265 - INFO - Updating existing folder: /Users/user/__Repositories/nestjs-prisma-starter-boilerplate__notiz-dev
+2025-02-25 12:10:28,307 - INFO - Successfully synchronized: /Users/user/__Repositories0/nestjs-prisma-starter-boilerplate__notiz-dev -> /Users/user/__Repositories/nestjs-prisma-starter-boilerplate__notiz-dev
+2025-02-25 12:10:28,307 - INFO - Processing folder: crypto-exchange-cex-okx-withdrawal2 (Reason: larger)
+2025-02-25 12:10:28,307 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-exchange-cex-okx-withdrawal2
+2025-02-25 12:10:28,393 - INFO - Successfully synchronized: /Users/user/__Repositories0/crypto-exchange-cex-okx-withdrawal2 -> /Users/user/__Repositories/crypto-exchange-cex-okx-withdrawal2
+2025-02-25 12:10:28,393 - INFO - Processing folder: LLMs-openrouter-compare-chat (Reason: larger)
+2025-02-25 12:10:28,394 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-openrouter-compare-chat
+2025-02-25 12:10:31,677 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-openrouter-compare-chat -> /Users/user/__Repositories/LLMs-openrouter-compare-chat
+2025-02-25 12:10:31,677 - INFO - Processing folder: LLMs-airpg__belbix-master (Reason: newer)
+2025-02-25 12:10:31,677 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-airpg__belbix-master
+2025-02-25 12:10:31,831 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-airpg__belbix-master -> /Users/user/__Repositories/LLMs-airpg__belbix-master
+2025-02-25 12:10:31,831 - INFO - Processing folder: LLMs-Cline__Cline (Reason: newer)
+2025-02-25 12:10:31,832 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-Cline__Cline
+2025-02-25 12:10:31,940 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-Cline__Cline -> /Users/user/__Repositories/LLMs-Cline__Cline
+2025-02-25 12:10:31,940 - INFO - Processing folder: LLMs-own-scripts (Reason: larger)
+2025-02-25 12:10:31,940 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-own-scripts
+2025-02-25 12:10:32,197 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-own-scripts -> /Users/user/__Repositories/LLMs-own-scripts
+2025-02-25 12:10:32,197 - INFO - Processing folder: LLMs-chatgpt-access-token (Reason: larger)
+2025-02-25 12:10:32,197 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-chatgpt-access-token
+2025-02-25 12:10:32,263 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-chatgpt-access-token -> /Users/user/__Repositories/LLMs-chatgpt-access-token
+2025-02-25 12:10:32,263 - INFO - Processing folder: LLMs-airpg__belbix-master-week4 (Reason: newer)
+2025-02-25 12:10:32,263 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-airpg__belbix-master-week4
+2025-02-25 12:10:32,520 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-airpg__belbix-master-week4 -> /Users/user/__Repositories/LLMs-airpg__belbix-master-week4
+2025-02-25 12:10:32,520 - INFO - Processing folder: LLMs-git2txt-repo-loader__addyosmani__developerisnow (Reason: larger)
+2025-02-25 12:10:32,520 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-git2txt-repo-loader__addyosmani__developerisnow
+2025-02-25 12:10:34,256 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-git2txt-repo-loader__addyosmani__developerisnow -> /Users/user/__Repositories/LLMs-git2txt-repo-loader__addyosmani__developerisnow
+2025-02-25 12:10:34,256 - INFO - Processing folder: translate-google-api-bulk (Reason: larger)
+2025-02-25 12:10:34,256 - INFO - Updating existing folder: /Users/user/__Repositories/translate-google-api-bulk
+2025-02-25 12:10:34,759 - INFO - Successfully synchronized: /Users/user/__Repositories0/translate-google-api-bulk -> /Users/user/__Repositories/translate-google-api-bulk
+2025-02-25 12:10:34,759 - INFO - Processing folder: LLMs-airpg__belbix-master-week5 (Reason: newer)
+2025-02-25 12:10:34,759 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-airpg__belbix-master-week5
+2025-02-25 12:10:34,848 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-airpg__belbix-master-week5 -> /Users/user/__Repositories/LLMs-airpg__belbix-master-week5
+2025-02-25 12:10:34,848 - INFO - Processing folder: obsidian-tasks (Reason: newer)
+2025-02-25 12:10:34,848 - INFO - Updating existing folder: /Users/user/__Repositories/obsidian-tasks
+2025-02-25 12:10:35,394 - INFO - Successfully synchronized: /Users/user/__Repositories0/obsidian-tasks -> /Users/user/__Repositories/obsidian-tasks
+2025-02-25 12:10:35,394 - INFO - Processing folder: LLMs-MoneyPrinterV2__FujiwaraChoki (Reason: newer)
+2025-02-25 12:10:35,394 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-MoneyPrinterV2__FujiwaraChoki
+2025-02-25 12:10:35,421 - INFO - Successfully synchronized: /Users/user/__Repositories0/LLMs-MoneyPrinterV2__FujiwaraChoki -> /Users/user/__Repositories/LLMs-MoneyPrinterV2__FujiwaraChoki
+2025-02-25 12:10:35,421 - INFO - Processing folder: crypto-wallets-Money-tools-binance-gen (Reason: newer)
+2025-02-25 12:10:35,421 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-wallets-Money-tools-binance-gen
+2025-02-25 12:10:35,434 - INFO - Successfully synchronized: /Users/user/__Repositories1/crypto-wallets-Money-tools-binance-gen -> /Users/user/__Repositories/crypto-wallets-Money-tools-binance-gen
+2025-02-25 12:10:35,434 - INFO - Processing folder: crypto-drop-checkers (Reason: larger)
+2025-02-25 12:10:35,434 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-drop-checkers
+2025-02-25 12:10:48,236 - INFO - Successfully synchronized: /Users/user/__Repositories1/crypto-drop-checkers -> /Users/user/__Repositories/crypto-drop-checkers
+2025-02-25 12:10:48,236 - INFO - Processing folder: second-brain-based-on-awesome-nest-boilerplate__NarHakobyan (Reason: newer)
+2025-02-25 12:10:48,236 - INFO - Updating existing folder: /Users/user/__Repositories/second-brain-based-on-awesome-nest-boilerplate__NarHakobyan
+2025-02-25 12:10:48,301 - INFO - Successfully synchronized: /Users/user/__Repositories1/second-brain-based-on-awesome-nest-boilerplate__NarHakobyan -> /Users/user/__Repositories/second-brain-based-on-awesome-nest-boilerplate__NarHakobyan
+2025-02-25 12:10:48,301 - INFO - Processing folder: crypto-Twitter-Multi-Actions (Reason: newer)
+2025-02-25 12:10:48,301 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-Twitter-Multi-Actions
+2025-02-25 12:10:48,315 - INFO - Successfully synchronized: /Users/user/__Repositories1/crypto-Twitter-Multi-Actions -> /Users/user/__Repositories/crypto-Twitter-Multi-Actions
+2025-02-25 12:10:48,315 - INFO - Processing folder: blockchainwave-html-api-scrapping (Reason: larger)
+2025-02-25 12:10:48,315 - INFO - Updating existing folder: /Users/user/__Repositories/blockchainwave-html-api-scrapping
+2025-02-25 12:10:48,370 - INFO - Successfully synchronized: /Users/user/__Repositories1/blockchainwave-html-api-scrapping -> /Users/user/__Repositories/blockchainwave-html-api-scrapping
+2025-02-25 12:10:48,370 - INFO - Processing folder: crypto-eth-wallet-notify (Reason: newer)
+2025-02-25 12:10:48,370 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-eth-wallet-notify
+2025-02-25 12:10:48,385 - INFO - Successfully synchronized: /Users/user/__Repositories1/crypto-eth-wallet-notify -> /Users/user/__Repositories/crypto-eth-wallet-notify
+2025-02-25 12:10:48,385 - INFO - Processing folder: crypto-wallets-Generate-EVMs-And-Check-Balances (Reason: newer)
+2025-02-25 12:10:48,385 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-wallets-Generate-EVMs-And-Check-Balances
+2025-02-25 12:10:48,400 - INFO - Successfully synchronized: /Users/user/__Repositories1/crypto-wallets-Generate-EVMs-And-Check-Balances -> /Users/user/__Repositories/crypto-wallets-Generate-EVMs-And-Check-Balances
+2025-02-25 12:10:48,400 - INFO - Processing folder: LLMs-airpg__belbix-master-week6-1 (Reason: newer)
+2025-02-25 12:10:48,400 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-airpg__belbix-master-week6-1
+2025-02-25 12:10:48,438 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-airpg__belbix-master-week6-1 -> /Users/user/__Repositories/LLMs-airpg__belbix-master-week6-1
+2025-02-25 12:10:48,438 - INFO - Processing folder: crypto-exchange-cex-cex-all-in-one-withdrawal (Reason: newer)
+2025-02-25 12:10:48,439 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-exchange-cex-cex-all-in-one-withdrawal
+2025-02-25 12:10:48,451 - INFO - Successfully synchronized: /Users/user/__Repositories1/crypto-exchange-cex-cex-all-in-one-withdrawal -> /Users/user/__Repositories/crypto-exchange-cex-cex-all-in-one-withdrawal
+2025-02-25 12:10:48,451 - INFO - Processing folder: second-brain-based-on-nestjs-boilerplate__brocoders (Reason: newer)
+2025-02-25 12:10:48,451 - INFO - Updating existing folder: /Users/user/__Repositories/second-brain-based-on-nestjs-boilerplate__brocoders
+2025-02-25 12:10:48,627 - INFO - Successfully synchronized: /Users/user/__Repositories1/second-brain-based-on-nestjs-boilerplate__brocoders -> /Users/user/__Repositories/second-brain-based-on-nestjs-boilerplate__brocoders
+2025-02-25 12:10:48,627 - INFO - Processing folder: LLMs-chatgpt-backup__abacaj (Reason: newer)
+2025-02-25 12:10:48,627 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-chatgpt-backup__abacaj
+2025-02-25 12:10:48,643 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-chatgpt-backup__abacaj -> /Users/user/__Repositories/LLMs-chatgpt-backup__abacaj
+2025-02-25 12:10:48,643 - INFO - Processing folder: obsidian-telegram-sync__soberhacker_test (Reason: newer)
+2025-02-25 12:10:48,643 - INFO - Updating existing folder: /Users/user/__Repositories/obsidian-telegram-sync__soberhacker_test
+2025-02-25 12:10:48,679 - INFO - Successfully synchronized: /Users/user/__Repositories1/obsidian-telegram-sync__soberhacker_test -> /Users/user/__Repositories/obsidian-telegram-sync__soberhacker_test
+2025-02-25 12:10:48,680 - INFO - Processing folder: nestjs-prisma-starter-boilerplate__notiz-dev (Reason: newer)
+2025-02-25 12:10:48,680 - INFO - Updating existing folder: /Users/user/__Repositories/nestjs-prisma-starter-boilerplate__notiz-dev
+2025-02-25 12:10:48,719 - INFO - Successfully synchronized: /Users/user/__Repositories1/nestjs-prisma-starter-boilerplate__notiz-dev -> /Users/user/__Repositories/nestjs-prisma-starter-boilerplate__notiz-dev
+2025-02-25 12:10:48,719 - INFO - Processing folder: crypto-exchange-cex-okx-withdrawal2 (Reason: larger)
+2025-02-25 12:10:48,719 - INFO - Updating existing folder: /Users/user/__Repositories/crypto-exchange-cex-okx-withdrawal2
+2025-02-25 12:10:48,768 - INFO - Successfully synchronized: /Users/user/__Repositories1/crypto-exchange-cex-okx-withdrawal2 -> /Users/user/__Repositories/crypto-exchange-cex-okx-withdrawal2
+2025-02-25 12:10:48,768 - INFO - Processing folder: LLMs-openrouter-compare-chat (Reason: larger)
+2025-02-25 12:10:48,768 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-openrouter-compare-chat
+2025-02-25 12:10:53,042 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-openrouter-compare-chat -> /Users/user/__Repositories/LLMs-openrouter-compare-chat
+2025-02-25 12:10:53,042 - INFO - Processing folder: LLMs-airpg__belbix-master (Reason: newer)
+2025-02-25 12:10:53,042 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-airpg__belbix-master
+2025-02-25 12:10:53,187 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-airpg__belbix-master -> /Users/user/__Repositories/LLMs-airpg__belbix-master
+2025-02-25 12:10:53,187 - INFO - Processing folder: LLMs-Cline__Cline (Reason: newer)
+2025-02-25 12:10:53,187 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-Cline__Cline
+2025-02-25 12:10:53,285 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-Cline__Cline -> /Users/user/__Repositories/LLMs-Cline__Cline
+2025-02-25 12:10:53,285 - INFO - Processing folder: LLMs-own-scripts (Reason: larger)
+2025-02-25 12:10:53,285 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-own-scripts
+2025-02-25 12:10:53,469 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-own-scripts -> /Users/user/__Repositories/LLMs-own-scripts
+2025-02-25 12:10:53,469 - INFO - Processing folder: LLMs-chatgpt-access-token (Reason: larger)
+2025-02-25 12:10:53,469 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-chatgpt-access-token
+2025-02-25 12:10:53,519 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-chatgpt-access-token -> /Users/user/__Repositories/LLMs-chatgpt-access-token
+2025-02-25 12:10:53,519 - INFO - Processing folder: LLMs-airpg__belbix-master-week4 (Reason: newer)
+2025-02-25 12:10:53,519 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-airpg__belbix-master-week4
+2025-02-25 12:10:53,700 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-airpg__belbix-master-week4 -> /Users/user/__Repositories/LLMs-airpg__belbix-master-week4
+2025-02-25 12:10:53,700 - INFO - Processing folder: LLMs-git2txt-repo-loader__addyosmani__developerisnow (Reason: larger)
+2025-02-25 12:10:53,700 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-git2txt-repo-loader__addyosmani__developerisnow
+2025-02-25 12:10:56,222 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-git2txt-repo-loader__addyosmani__developerisnow -> /Users/user/__Repositories/LLMs-git2txt-repo-loader__addyosmani__developerisnow
+2025-02-25 12:10:56,222 - INFO - Processing folder: translate-google-api-bulk (Reason: larger)
+2025-02-25 12:10:56,222 - INFO - Updating existing folder: /Users/user/__Repositories/translate-google-api-bulk
+2025-02-25 12:10:56,930 - INFO - Successfully synchronized: /Users/user/__Repositories1/translate-google-api-bulk -> /Users/user/__Repositories/translate-google-api-bulk
+2025-02-25 12:10:56,930 - INFO - Processing folder: LLMs-airpg__belbix-master-week5 (Reason: newer)
+2025-02-25 12:10:56,930 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-airpg__belbix-master-week5
+2025-02-25 12:10:57,021 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-airpg__belbix-master-week5 -> /Users/user/__Repositories/LLMs-airpg__belbix-master-week5
+2025-02-25 12:10:57,021 - INFO - Processing folder: obsidian-tasks (Reason: newer)
+2025-02-25 12:10:57,021 - INFO - Updating existing folder: /Users/user/__Repositories/obsidian-tasks
+2025-02-25 12:10:57,548 - INFO - Successfully synchronized: /Users/user/__Repositories1/obsidian-tasks -> /Users/user/__Repositories/obsidian-tasks
+2025-02-25 12:10:57,548 - INFO - Processing folder: LLMs-MoneyPrinterV2__FujiwaraChoki (Reason: newer)
+2025-02-25 12:10:57,548 - INFO - Updating existing folder: /Users/user/__Repositories/LLMs-MoneyPrinterV2__FujiwaraChoki
+2025-02-25 12:10:57,573 - INFO - Successfully synchronized: /Users/user/__Repositories1/LLMs-MoneyPrinterV2__FujiwaraChoki -> /Users/user/__Repositories/LLMs-MoneyPrinterV2__FujiwaraChoki
+2025-02-25 12:10:57,573 - INFO - Removing duplicate folder: /Users/user/__Repositories0
+2025-02-25 12:11:03,680 - INFO - Successfully removed: /Users/user/__Repositories0
+2025-02-25 12:11:03,680 - INFO - Removing duplicate folder: /Users/user/__Repositories1
+2025-02-25 12:11:09,452 - INFO - Successfully removed: /Users/user/__Repositories1
+2025-02-25 12:11:09,452 - INFO - Synchronization complete
+2025-02-25 12:11:09,452 - INFO - Total folders processed: 50
+2025-02-25 12:11:09,452 - INFO - Folders synced from /Users/user/__Repositories0: 25
+2025-02-25 12:11:09,452 - INFO - Folders synced from /Users/user/__Repositories1: 25
+2025-02-25 12:11:09,452 - INFO - Log file: /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/compare/log-sync-folders-2025-02-25-1210.log

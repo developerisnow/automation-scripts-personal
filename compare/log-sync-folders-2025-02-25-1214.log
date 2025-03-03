@@ -1,0 +1,23 @@
+2025-02-25 12:14:38,163 - INFO - Starting folder synchronization
+2025-02-25 12:14:38,163 - INFO - Main folder: /Users/user/__  epositories
+2025-02-25 12:14:38,163 - INFO - Duplicate folders: ['/Users/user/NextCloud2_0']
+2025-02-25 12:14:38,163 - INFO - Comparison CSV: /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/compare/compare_folders-2025-02-25-1213.csv
+2025-02-25 12:14:38,163 - INFO - Remove duplicates after sync: False
+2025-02-25 12:14:38,163 - INFO - Found 4 folders to sync from /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/compare/compare_folders-2025-02-25-1213.csv
+2025-02-25 12:14:38,163 - INFO - Processing folder: __Repositories_nxtcld (Reason: larger)
+2025-02-25 12:14:38,163 - INFO - Creating new folder: /Users/user/__  epositories/__Repositories_nxtcld
+2025-02-25 12:14:38,165 - INFO - Successfully synchronized: /Users/user/NextCloud2_0/__Repositories_nxtcld -> /Users/user/__  epositories/__Repositories_nxtcld
+2025-02-25 12:14:38,165 - INFO - Processing folder: files_my (Reason: larger)
+2025-02-25 12:14:38,165 - INFO - Creating new folder: /Users/user/__  epositories/files_my
+2025-02-25 12:14:59,105 - INFO - Successfully synchronized: /Users/user/NextCloud2_0/files_my -> /Users/user/__  epositories/files_my
+2025-02-25 12:14:59,105 - INFO - Processing folder: temp (Reason: larger)
+2025-02-25 12:14:59,105 - INFO - Creating new folder: /Users/user/__  epositories/temp
+2025-02-25 12:14:59,576 - INFO - Successfully synchronized: /Users/user/NextCloud2_0/temp -> /Users/user/__  epositories/temp
+2025-02-25 12:14:59,576 - INFO - Processing folder: ___PARA_nxtcld (Reason: larger)
+2025-02-25 12:14:59,576 - INFO - Creating new folder: /Users/user/__  epositories/___PARA_nxtcld
+2025-02-25 12:14:59,614 - INFO - Successfully synchronized: /Users/user/NextCloud2_0/___PARA_nxtcld -> /Users/user/__  epositories/___PARA_nxtcld
+2025-02-25 12:14:59,615 - INFO - Skipping removal of duplicate folders as REMOVE_DUPLICATES is set to False
+2025-02-25 12:14:59,615 - INFO - Synchronization complete
+2025-02-25 12:14:59,615 - INFO - Total folders processed: 4
+2025-02-25 12:14:59,615 - INFO - Folders synced from /Users/user/NextCloud2_0: 4
+2025-02-25 12:14:59,615 - INFO - Log file: /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/compare/log-sync-folders-2025-02-25-1214.log
