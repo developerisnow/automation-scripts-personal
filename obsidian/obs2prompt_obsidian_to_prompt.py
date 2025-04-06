@@ -1,8 +1,18 @@
-import os
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+ObsidianToPrompt - Process Obsidian vault links and extract content.
+"""
+
 import re
+import os
+import sys
+import argparse
 import subprocess
-from typing import Set, Dict, Optional, List, Tuple
+from typing import List, Tuple, Optional, Dict, Set
 from datetime import datetime
+import pyperclip
 
 class ObsidianLinkCollector:
     def __init__(self, vault_path: str = None, max_depth: int = 1, debug: bool = False):
@@ -20,64 +30,42 @@ class ObsidianLinkCollector:
         self.start_file = None  # Store start file name
         # Initialize try_variants as an empty list
         self.try_variants = []
-        # Updated pattern to properly handle links with pipe symbol
-        self.link_pattern = re.compile(r'\[\[([^|\]]+)(?:\|[^\]]+)?\]\]')
+        # Updated pattern to properly handle links with pipe symbol AND heading links
+        self.link_pattern = re.compile(r'(?:\[\[|\!)?\[\[(.*?)(?:#(.*?))?\]\](?:\]\])?')
+        self.file_content_map = {}  # Track file content by file path
         
     def _debug(self, msg: str):
         if self.debug_enabled:
             print(f"DEBUG: {msg}")
 
-    def collect_links(self, start_file: str) -> str:
-        """Start collecting from the specified file."""
-        self._debug(f"Processing file: {start_file} at depth 0")
-        self.start_file = start_file
-        normalized_path = self._normalize_filename(start_file)
+    def process(self, start_path: str) -> str:
+        """Process the Obsidian vault starting from a specific file."""
+        self.start_file = start_path
+        normalized_path = self._normalize_filename(start_path)
         
-        if normalized_path is None:
-            # Try with MOC prefix explicitly
-            if not start_file.startswith("MOC-"):
-                self._debug(f"Trying with MOC prefix")
-                moc_filename = f"MOC-{start_file}"
-                normalized_path = self._normalize_filename(moc_filename)
-                
-            # If still not found, do an aggressive search
-            if normalized_path is None:
-                self._debug(f"Trying full recursive search for: {start_file}")
-                
-                # Try searching with a simple recursive find
-                for root, _, files in self._custom_walk(self.vault_path):
-                    for file in files:
-                        # Check if the base filename is contained in any file
-                        base_name = start_file
-                        if base_name.endswith('.md'):
-                            base_name = base_name[:-3]
-                            
-                        # Check for partial match
-                        if file.endswith('.md') and base_name.lower() in file.lower():
-                            normalized_path = os.path.join(root, file)
-                            self._debug(f"Found through full search: {normalized_path}")
-                            break
-                            
-                    if normalized_path:
-                        break
+        if not normalized_path:
+            self._debug(f"Could not find file: {start_path}")
+            return f"File not found: {start_path}"
+            
+        self._debug(f"Starting from normalized file: {normalized_path}")
         
-        if normalized_path:
-            self._debug(f"Starting from normalized file: {normalized_path}")
-            self._process_file(normalized_path, 0)
-        else:
-            self._debug(f"Could not find any matching file for: {start_file}")
+        # Process the start file
+        self._process_file(normalized_path, 0)
         
-        # Generate and return the output
         return self._generate_output()
-    
-    def _process_file(self, filename: str, current_depth: int) -> None:
-        """Process a single file and follow its links."""
-        # Check if we've already processed this file
-        if filename in self.visited_files:
+
+    def _process_file(self, filename: str, current_depth: int = 0, specific_heading: Optional[str] = None) -> None:
+        """Process a file and extract its content and links."""
+        self._debug(f"Processing file: {filename} at depth {current_depth}")
+            
+        # Check if we've already processed this exact file+heading combination
+        file_heading_key = f"{filename}#{specific_heading or ''}"
+        if file_heading_key in self.visited_files:
+            self._debug(f"Skipping already processed file+heading: {file_heading_key}")
             return
             
-        # Add to visited files
-        self.visited_files.add(filename)
+        # Add to visited files to prevent duplicates
+        self.visited_files.add(file_heading_key)
         
         # Check if file exists
         if not os.path.exists(filename):
@@ -87,45 +75,71 @@ class ObsidianLinkCollector:
         # Read the file content
         try:
             with open(filename, 'r', encoding='utf-8') as f:
-                content = f.read()
+                full_content = f.read()
         except Exception as e:
             self._debug(f"Error reading file {filename}: {str(e)}")
             return
             
+        # Determine the content to add (full file or specific section)
+        content_to_add = full_content # Default to full content
+        
+        # If a specific heading is requested, extract that section
+        if specific_heading:
+            self._debug(f"Looking for heading '{specific_heading}' in {filename}")
+            extracted_section = self._extract_section(full_content, specific_heading)
+            if extracted_section:
+                content_to_add = extracted_section
+                self._debug(f"Extracted section under heading '{specific_heading}'")
+            else:
+                self._debug(f"Heading '{specific_heading}' not found. Adding full file content instead.")
+        
+        # Store file to content mapping
+        self.file_content_map[file_heading_key] = content_to_add
+        
         # Add to collected files
-        self.collected_files.append((filename, content))
-        self._debug(f"Collected file: {filename}")
+        self.collected_files.append((filename, content_to_add))
+        self._debug(f"Collected content from: {filename} (Heading: {specific_heading or 'None'})")
         
         # If we've reached the maximum depth, don't process links
         if current_depth >= self.max_depth:
             return
-            
-        # Extract links
-        links = self.link_pattern.findall(content)
-        self._debug(f"Found {len(links)} links in {filename}")
         
-        # Process each link
-        for link in links:
-            # Clean the link (remove any trailing/leading whitespace)
-            link = link.strip()
-            self._debug(f"Processing link: {link}")
+        # Extract all links and organize them by target file
+        raw_links = self.link_pattern.findall(full_content)
+        self._debug(f"Found {len(raw_links)} potential links in {filename}")
+        
+        # Group links by target file
+        link_groups = {}
+        for match in raw_links:
+            link_target = match[0].strip()
+            heading_target = match[1].strip() if len(match) > 1 and match[1] else None
             
-            # Normalize the filename
-            normalized_path = self._normalize_filename(link)
-            if normalized_path:
-                self._debug(f"Link normalized to: {normalized_path}")
+            if link_target not in link_groups:
+                link_groups[link_target] = []
+            link_groups[link_target].append(heading_target)
+        
+        # Process each target file exactly once, prioritizing general links
+        for link_target, headings in link_groups.items():
+            normalized_path = self._normalize_filename(link_target)
+            if not normalized_path:
+                self._debug(f"Could not normalize link target: {link_target}")
+                continue
+                
+            self._debug(f"Link target '{link_target}' normalized to: {normalized_path}")
+            
+            # Check if there's a general link (None heading)
+            if None in headings:
+                # Process the general link and skip all heading-specific links
+                self._debug(f"Found general link for {link_target}, skipping all heading-specific links")
                 self._process_file(normalized_path, current_depth + 1)
             else:
-                self._debug(f"Could not normalize link: {link}")
-                
-                # Try to look for the file in the same directory as the current file
-                current_dir = os.path.dirname(filename)
-                if current_dir:
-                    parent_path = os.path.join(current_dir, f"{link}.md")
-                    if os.path.exists(parent_path):
-                        self._debug(f"Found link in same directory: {parent_path}")
-                        self._process_file(parent_path, current_depth + 1)
-    
+                # Process each unique heading-specific link
+                unique_headings = list(set(headings))
+                for heading in unique_headings:
+                    if heading:  # Skip empty headings
+                        self._debug(f"Processing heading-specific link: {link_target}#{heading}")
+                        self._process_file(normalized_path, current_depth + 1, specific_heading=heading)
+
     def _format_tree(self, paths: list[str]) -> list[str]:
         """Format paths as a tree structure."""
         if not paths:
@@ -208,8 +222,23 @@ class ObsidianLinkCollector:
     def _generate_tree_structure(self) -> str:
         """Generate a tree structure of collected files."""
         tree_lines = []
-        for file_path, _ in self.collected_files:
+        for i, (file_path, content) in enumerate(self.collected_files):
+            # Get the relative path
             rel_path = os.path.relpath(file_path, self.vault_path)
+            
+            # Find which heading (if any) this file+content was collected with
+            heading = None
+            for file_heading_key, stored_content in self.file_content_map.items():
+                if file_path in file_heading_key and stored_content == content:
+                    # Extract heading from the key (format: filepath#heading)
+                    if '#' in file_heading_key:
+                        heading = file_heading_key.split('#', 1)[1]
+                    break
+            
+            # Add heading information if available
+            if heading:
+                rel_path = f"{rel_path} (heading: {heading})"
+            
             tree_lines.append(rel_path)
         
         tree_lines.sort()
@@ -306,98 +335,148 @@ class ObsidianLinkCollector:
     def get_statistics(self) -> dict:
         """Get statistics about processed files."""
         total_lines = sum(len(content.splitlines()) for _, content in self.collected_files)
-        total_size = sum(os.path.getsize(path) for path, _ in self.collected_files)
-        total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)
+        
+        # Calculate size based on the actual collected content, not original file sizes
+        total_content_size = sum(len(content.encode('utf-8')) for _, content in self.collected_files)
+        
+        # Calculate token count based on the actual content
+        total_tokens = 0
+        for _, content in self.collected_files:
+            # Estimate tokens: roughly 4 characters per token
+            total_tokens += len(content.split())
         
         return {
             'file_count': len(self.collected_files),
             'total_lines': total_lines,
-            'total_size': self._format_size(total_size),
+            'total_size': self._format_size(total_content_size),
             'total_tokens': total_tokens
         }
 
-# Example usage
-if __name__ == "__main__":
-    import argparse
-    import pyperclip
-    import sys
-    
-    parser = argparse.ArgumentParser(description='Collect and combine Obsidian notes.')
-    parser.add_argument('input_file', help='The starting note file to process')
-    parser.add_argument('--depth', type=int, default=1, help='Maximum depth of links to follow (default: 1)')
-    parser.add_argument('--vault', help='Path to the Obsidian vault')
-    parser.add_argument('--output', help='Output file path (default: temp/aggregate_<input_filename>.txt)')
+    def _extract_section(self, content: str, heading: str) -> Optional[str]:
+        """Extracts the content under a specific markdown heading."""
+        # Normalize heading for matching (case-insensitive, strip whitespace)
+        normalized_heading = heading.strip().lower()
+        # Replace some common punctuation/formatting with spaces for better matching
+        normalized_heading = re.sub(r'[:_\-]', ' ', normalized_heading)
+        # Remove extra spaces
+        normalized_heading = re.sub(r'\s+', ' ', normalized_heading).strip()
+        
+        self._debug(f"Looking for normalized heading: '{normalized_heading}'")
+        
+        lines = content.splitlines()
+        start_line = -1
+        heading_level = -1
+        
+        # Find the heading line and its level
+        for i, line in enumerate(lines):
+            stripped_line = line.strip()
+            if stripped_line.startswith('#'):
+                level = stripped_line.count('#', 0, 6) # Max heading level 6
+                # Extract heading text after the # symbols and removing any trailing #s (for markdown style)
+                heading_text = stripped_line[level:].strip().lower()
+                heading_text = heading_text.rstrip('#').strip()  # Handle ### Header ### style
+                
+                # Normalize the found heading text in the same way as the target
+                heading_text = re.sub(r'[:_\-]', ' ', heading_text)
+                heading_text = re.sub(r'\s+', ' ', heading_text).strip()
+                
+                self._debug(f"Checking heading at line {i+1}: '{heading_text}' (level {level}) against '{normalized_heading}'")
+                
+                if heading_text == normalized_heading:
+                    start_line = i
+                    heading_level = level
+                    self._debug(f"Found matching heading '{heading}' at line {i+1}, level {level}")
+                    break
+                    
+        if start_line == -1:
+            self._debug(f"Heading '{heading}' not found in content")
+            return None # Heading not found
+            
+        # Find the end of the section (next heading of same or lower level, or EOF)
+        end_line = len(lines)
+        for i in range(start_line + 1, len(lines)):
+            stripped_line = lines[i].strip()
+            if stripped_line.startswith('#'):
+                level = stripped_line.count('#', 0, 6)
+                if level <= heading_level:
+                    end_line = i
+                    self._debug(f"End of section found at line {i+1} (next heading of level {level})")
+                    break
+                    
+        # Extract the lines for the section (including the heading line itself)
+        section_lines = lines[start_line:end_line]
+        section_content = "\n".join(section_lines)
+        self._debug(f"Extracted section with {len(section_lines)} lines")
+        return section_content
+
+def main():
+    parser = argparse.ArgumentParser(description='Process Obsidian vault links.')
+    parser.add_argument('input_file', help='The starting Obsidian note')
+    parser.add_argument('--depth', type=int, default=5, help='Maximum depth to follow links')
+    parser.add_argument('--output', help='Output file path')
+    parser.add_argument('--vault-path', help='Path to the Obsidian vault')
     parser.add_argument('--debug', action='store_true', help='Enable debug output')
-    parser.add_argument('--verbose', action='store_true', help='Enable detailed progress messages')
-    parser.add_argument('--no-clipboard', action='store_true', help='Disable copying to clipboard')
-    
+    parser.add_argument('--clipboard', action='store_true', help='Copy result to clipboard')
+    parser.add_argument('--version', action='version', version='%(prog)s 1.3.0')
     args = parser.parse_args()
     
-    # Enable verbose mode if debug is enabled
-    if args.debug:
-        args.verbose = True
-    
-    # Determine the vault path
-    vault_path = args.vault
+    # Determine vault path
+    vault_path = args.vault_path
     if not vault_path:
         vault_path = os.environ.get('OBSIDIAN_VAULT_PATH')
         if not vault_path:
-            # Default to current directory
-            vault_path = os.getcwd()
-            print(f"No vault path specified. Using current directory: {vault_path}")
+            # Default to the user's home directory
+            vault_path = os.path.expanduser('~')
     
-    if not os.path.exists(vault_path):
-        print(f"Error: Vault path does not exist: {vault_path}")
-        sys.exit(1)
-        
-    if args.verbose:
-        print(f"Using vault path: {vault_path}")
+    print(f"Using vault path: {vault_path}")
     
-    # Create the collector
-    collector = ObsidianLinkCollector(vault_path=vault_path, max_depth=args.depth, debug=args.debug)
-    
-    # Determine the output path
-    output_filename = args.output
-    if not output_filename:
-        # Get output directory from environment or default to "./temp"
-        output_dir = os.environ.get('O2P_OUTPUT_DIR', os.path.join(os.getcwd(), 'temp'))
-        os.makedirs(output_dir, exist_ok=True)
-        
-        # Clean the input filename for use in the output filename
-        clean_name = os.path.basename(args.input_file)
-        if clean_name.endswith('.md'):
-            clean_name = clean_name[:-3]
-        
-        output_filename = os.path.join(output_dir, f"aggregate_{clean_name}.txt")
+    # Create collector instance
+    collector = ObsidianLinkCollector(vault_path, args.depth, args.debug)
     
     # Process the input file
     try:
-        result = collector.collect_links(args.input_file)
+        result = collector.process(args.input_file)
         
         # Get statistics for printing
         stats = collector.get_statistics()
+        
+        # Determine where to save
+        if args.output:
+            output_path = args.output
+        else:
+            temp_dir = os.path.join(vault_path, 'temp')
+            os.makedirs(temp_dir, exist_ok=True)
+            base_name = os.path.basename(args.input_file).replace('.md', '')
+            output_path = os.path.join(temp_dir, f"aggregate_{base_name}.txt")
+        
+        # Write to file
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(result)
+        
+        # Display summary
         print("\nFile Statistics:")
         print(f"- Total Files: {stats['file_count']}")
         print(f"- Total Lines: {stats['total_lines']}")
         print(f"- Total Size: {stats['total_size']}")
         print(f"- Total Tokens: {stats['total_tokens']}")
+        print(f"\nResults saved to: {output_path}")
         
-        # Save the result to the output file
-        with open(output_filename, 'w', encoding='utf-8') as f:
-            f.write(result)
-        print(f"\nResults saved to: {output_filename}")
-        
-        # Copy to clipboard if enabled
-        if not args.no_clipboard:
+        # Copy to clipboard if requested
+        if args.clipboard:
             try:
                 pyperclip.copy(result)
                 print("Content copied to clipboard!")
             except Exception as e:
-                print(f"Could not copy to clipboard: {e}")
-                
+                print(f"Error copying to clipboard: {str(e)}")
+        
     except Exception as e:
-        print(f"Error processing file: {e}")
+        print(f"Error processing file: {str(e)}")
         if args.debug:
             import traceback
             traceback.print_exc()
-        sys.exit(1)
+        return 1
+        
+    return 0
+
+if __name__ == "__main__":
+    sys.exit(main())
