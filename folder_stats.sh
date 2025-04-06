@@ -2,15 +2,20 @@
 #
 # folder_stats.sh: Display a directory tree with file size (KB) and line counts.
 #
-# Usage: ./folder_stats.sh <directory>
+# Usage: ./folder_stats.sh <directory> [big10]
 
 # Ensure a directory is provided
 if [ $# -eq 0 ]; then
     echo "Usage: $(basename "$0") <directory>"
     exit 1
 fi
-
 TARGET_DIR="$1"
+
+# Check if user provided 'big10' argument to show top 10 largest files by lines of code
+if [ "$2" == "big15" ]; then
+    find "$TARGET_DIR" -type f -exec wc -l {} + | sort -nr | head -15 | awk '{print $2" ["$1" lines]"}'
+    exit 0
+fi
 
 if [ ! -d "$TARGET_DIR" ]; then
     echo "Error: $TARGET_DIR is not a directory."

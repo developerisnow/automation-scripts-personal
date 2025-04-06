@@ -2,6 +2,7 @@ import os
 import re
 import subprocess
 from typing import Set, Dict, Optional, List, Tuple
+from datetime import datetime
 
 class ObsidianLinkCollector:
     def __init__(self, vault_path: str = None, max_depth: int = 1, debug: bool = False):
@@ -17,6 +18,8 @@ class ObsidianLinkCollector:
         self.visited_files = set()
         self.collected_files: List[Tuple[str, str]] = []  # [(file_path, content)]
         self.start_file = None  # Store start file name
+        # Initialize try_variants as an empty list
+        self.try_variants = []
         # Updated pattern to properly handle links with pipe symbol
         self.link_pattern = re.compile(r'\[\[([^|\]]+)(?:\|[^\]]+)?\]\]')
         
@@ -25,69 +28,103 @@ class ObsidianLinkCollector:
             print(f"DEBUG: {msg}")
 
     def collect_links(self, start_file: str) -> str:
-        """Main entry point to collect content from a starting file."""
-        self.start_file = start_file  # Store start file name
-        self._process_file(start_file, current_depth=0)
+        """Start collecting from the specified file."""
+        self._debug(f"Processing file: {start_file} at depth 0")
+        self.start_file = start_file
+        normalized_path = self._normalize_filename(start_file)
+        
+        if normalized_path is None:
+            # Try with MOC prefix explicitly
+            if not start_file.startswith("MOC-"):
+                self._debug(f"Trying with MOC prefix")
+                moc_filename = f"MOC-{start_file}"
+                normalized_path = self._normalize_filename(moc_filename)
+                
+            # If still not found, do an aggressive search
+            if normalized_path is None:
+                self._debug(f"Trying full recursive search for: {start_file}")
+                
+                # Try searching with a simple recursive find
+                for root, _, files in self._custom_walk(self.vault_path):
+                    for file in files:
+                        # Check if the base filename is contained in any file
+                        base_name = start_file
+                        if base_name.endswith('.md'):
+                            base_name = base_name[:-3]
+                            
+                        # Check for partial match
+                        if file.endswith('.md') and base_name.lower() in file.lower():
+                            normalized_path = os.path.join(root, file)
+                            self._debug(f"Found through full search: {normalized_path}")
+                            break
+                            
+                    if normalized_path:
+                        break
+        
+        if normalized_path:
+            self._debug(f"Starting from normalized file: {normalized_path}")
+            self._process_file(normalized_path, 0)
+        else:
+            self._debug(f"Could not find any matching file for: {start_file}")
+        
+        # Generate and return the output
         return self._generate_output()
     
     def _process_file(self, filename: str, current_depth: int) -> None:
-        """Process a single file and its links recursively."""
-        self._debug(f"Processing file: {filename} at depth {current_depth}")
-        
-        if current_depth > self.max_depth:
-            self._debug(f"Max depth reached for {filename}")
+        """Process a single file and follow its links."""
+        # Check if we've already processed this file
+        if filename in self.visited_files:
             return
             
-        # Handle full paths in wiki-links
-        if '/' in filename:
-            # Extract just the filename part for normalization
-            base_filename = os.path.basename(filename)
-            # Use the directory part as-is
-            dir_part = os.path.dirname(filename)
-            file_path = os.path.join(self.vault_path, dir_part, base_filename)
-            if not file_path.endswith('.md'):
-                file_path += '.md'
-        else:
-            # Original normalization for simple filenames
-            norm_filename = self._normalize_filename(filename)
-            if not norm_filename:
-                self._debug(f"Could not normalize filename: {filename}")
-                return
-            file_path = os.path.join(self.vault_path, norm_filename)
-            
-        self._debug(f"Full file path: {file_path}")
+        # Add to visited files
+        self.visited_files.add(filename)
         
-        if file_path in self.visited_files:
-            self._debug(f"Already visited: {file_path}")
+        # Check if file exists
+        if not os.path.exists(filename):
+            self._debug(f"File does not exist: {filename}")
             return
             
-        if not os.path.exists(file_path):
-            self._debug(f"File does not exist: {file_path}")
-            return
-            
-        self.visited_files.add(file_path)
-        
+        # Read the file content
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(filename, 'r', encoding='utf-8') as f:
                 content = f.read()
-                self._debug(f"Successfully read file: {file_path}")
-                self.collected_files.append((file_path, content))
-            
-            # Extract links, handling both parts of piped links
-            links = []
-            for match in self.link_pattern.finditer(content):
-                link = match.group(1)  # This gets the part before the pipe
-                links.append(link)
-                
-            self._debug(f"Found links in {filename}: {links}")
-            
-            if current_depth < self.max_depth:
-                for link in links:
-                    clean_link = link.strip('@$ =')  # Handle special prefixes
-                    self._process_file(clean_link, current_depth + 1)
-                    
         except Exception as e:
-            self._debug(f"Error processing {filename}: {str(e)}")
+            self._debug(f"Error reading file {filename}: {str(e)}")
+            return
+            
+        # Add to collected files
+        self.collected_files.append((filename, content))
+        self._debug(f"Collected file: {filename}")
+        
+        # If we've reached the maximum depth, don't process links
+        if current_depth >= self.max_depth:
+            return
+            
+        # Extract links
+        links = self.link_pattern.findall(content)
+        self._debug(f"Found {len(links)} links in {filename}")
+        
+        # Process each link
+        for link in links:
+            # Clean the link (remove any trailing/leading whitespace)
+            link = link.strip()
+            self._debug(f"Processing link: {link}")
+            
+            # Normalize the filename
+            normalized_path = self._normalize_filename(link)
+            if normalized_path:
+                self._debug(f"Link normalized to: {normalized_path}")
+                self._process_file(normalized_path, current_depth + 1)
+            else:
+                self._debug(f"Could not normalize link: {link}")
+                
+                # Try to look for the file in the same directory as the current file
+                current_dir = os.path.dirname(filename)
+                if current_dir:
+                    parent_path = os.path.join(current_dir, f"{link}.md")
+                    if os.path.exists(parent_path):
+                        self._debug(f"Found link in same directory: {parent_path}")
+                        self._process_file(parent_path, current_depth + 1)
     
     def _format_tree(self, paths: list[str]) -> list[str]:
         """Format paths as a tree structure."""
@@ -107,48 +144,58 @@ class ObsidianLinkCollector:
         return result
 
     def _generate_output(self) -> str:
-        """Generate formatted output with statistics and content."""
-        if not self.collected_files:
-            return "No files processed."
-
-        # Sort files, but ensure start file is first
-        start_file_path = os.path.join(self.vault_path, self._normalize_filename(self.start_file))
-        self.collected_files.sort(key=lambda x: (x[0] != start_file_path, x[0]))
-
-        # Calculate statistics
-        total_lines = sum(len(content.splitlines()) for _, content in self.collected_files)
-        total_size = sum(os.path.getsize(path) for path, _ in self.collected_files)
-        total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)
-
-        # Build output sections
-        sections = [
-            f"Project Path: {self.vault_path}\n",
-            "Source Tree:",
-            "```",
-            self._generate_tree_structure(),
-            "```\n",
-            "File Statistics:",
-            f"- Total Files: {len(self.collected_files)}",
-            f"- Total Lines: {total_lines}",
-            f"- Total Size: {self._format_size(total_size)}",
-            f"- Total Tokens: {total_tokens}\n",
-            "Content:"
-        ]
-
-        # Add content section with proper error handling
+        """Generate the final output text."""
+        output_parts = []
+        
+        # Add a header with information about the source
+        if self.start_file:
+            output_parts.append(f"# Content from {self.start_file}\n")
+            output_parts.append(f"- Generated on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            output_parts.append(f"- Depth: {self.max_depth}")
+            output_parts.append(f"- Files collected: {len(self.collected_files)}\n")
+        
+        # Add the tree structure when we have more than one file
+        if len(self.collected_files) > 1:
+            tree_structure = self._generate_tree_structure()
+            output_parts.append("## File Structure\n")
+            output_parts.append(tree_structure)
+            output_parts.append("\n")
+        
+        # Add each file's content with headers
+        output_parts.append("## Content\n")
+        
         for file_path, content in self.collected_files:
+            # Get the relative path from the vault path
             try:
-                rel_path = os.path.relpath(file_path, self.vault_path)
-                sections.extend([
-                    f"`{rel_path}`:",
-                    "```md",
-                    content.strip(),
-                    "```\n"
-                ])
-            except Exception as e:
-                self._debug(f"Error processing content for {file_path}: {str(e)}")
-
-        return "\n".join(sections)
+                relative_path = os.path.relpath(file_path, self.vault_path)
+            except ValueError:
+                # Handle case when file_path and self.vault_path are on different drives
+                relative_path = file_path
+                
+            # Add a header with the file name
+            file_name = os.path.basename(file_path)
+            header = f"### {file_name}"
+            output_parts.append(header)
+            
+            # Add the file path
+            output_parts.append(f"Path: `{relative_path}`\n")
+            
+            # Add the content
+            output_parts.append(content)
+            
+            # Add a separator
+            output_parts.append("\n---\n")
+            
+        # Generate and append statistics
+        stats = self.get_statistics()
+        output_parts.append("## File Statistics\n")
+        output_parts.append(f"- Total Files: {stats['file_count']}")
+        output_parts.append(f"- Total Lines: {stats['total_lines']}")
+        output_parts.append(f"- Total Size: {stats['total_size']}")
+        output_parts.append(f"- Total Tokens: {stats['total_tokens']}")
+        
+        # Join all parts with newlines
+        return "\n".join(output_parts)
 
     def _format_size(self, size_bytes: int) -> str:
         """Convert bytes to human readable format."""
@@ -192,55 +239,69 @@ class ObsidianLinkCollector:
             return 0
 
     def _normalize_filename(self, filename: str) -> Optional[str]:
-        """Convert various filename formats to actual file path."""
-        filename = filename.strip()
-        if not filename:
-            return None
+        """Normalize the filename and find the actual path to the file."""
+        # If the file already exists, return it
+        if os.path.exists(os.path.join(self.vault_path, filename)):
+            return os.path.join(self.vault_path, filename)
             
-        # First try direct path match
-        for root, _, files in os.walk(self.vault_path):
-            for file in files:
-                if file == filename or file == filename + '.md':
-                    return os.path.relpath(os.path.join(root, file), self.vault_path)
-
-        # Extract the base name (remove prefixes if present)
+        # If the path includes .md extension, try with and without it
         base_name = filename
-        prefixes = ['$', '@', '=', '$.', '$ ', '$. ']
-        for prefix in prefixes:
-            if filename.startswith(prefix):
-                base_name = filename[len(prefix):].strip()
-                break
-
-        # Generate all possible variants
-        variants = [
-            filename,  # Original as-is
-            filename + '.md',
-            filename + '🌳.md',
-            base_name + '.md',
-            base_name + '🌳.md',
-            base_name.replace(' ', '_') + '.md',
-            base_name.replace(' ', '-') + '.md',
-        ]
+        if filename.endswith('.md'):
+            base_name = filename[:-3]
         
-        # Add prefix variants
-        for prefix in prefixes:
-            variants.extend([
-                prefix + base_name + '.md',
-                prefix + base_name.replace(' ', '_') + '.md',
-                prefix + base_name.replace(' ', '-') + '.md',
-            ])
+        # Create a list of possible file variants
+        self.try_variants = [base_name, f"{base_name}.md", f"{base_name}🌳.md", 
+                      f"${base_name}.md", f"@{base_name}.md", f"={base_name}.md",
+                      f"$.{base_name}.md", f"$ {base_name}.md", f"$. {base_name}.md"]
         
-        # Remove duplicates while preserving order
-        variants = list(dict.fromkeys(variants))
+        self._debug(f"Trying variants: {self.try_variants}")
         
-        # Search in all subdirectories
-        for root, _, files in os.walk(self.vault_path):
-            for variant in variants:
-                if variant in files:
-                    return os.path.relpath(os.path.join(root, variant), self.vault_path)
+        for variant in self.try_variants:
+            full_path = os.path.join(self.vault_path, variant)
+            if os.path.exists(full_path):
+                self._debug(f"Found in root directory: {full_path}")
+                return full_path
+        
+        # Perform recursive search through subdirectories if not found
+        self._debug(f"File not found in root. Searching subdirectories for: {filename}")
+        
+        # Try a more flexible search looking for the filename in subdirectories
+        for root, dirs, files in self._custom_walk(self.vault_path):
+            # Skip directories that start with a dot or underscore 'temp'
+            dirs[:] = [d for d in dirs if not d.startswith('.') and not d == 'temp']
+            
+            # Try all variants in this directory
+            for variant in self.try_variants:
+                full_path = os.path.join(root, variant)
+                if os.path.exists(full_path):
+                    self._debug(f"Found file in subdirectory: {full_path}")
+                    return full_path
+            
+            # Also check for MOC- prefix which might be missing from the search
+            moc_variants = []
+            if not base_name.startswith("MOC-"):
+                moc_variants.append(f"MOC-{base_name}.md")
+            
+            for variant in moc_variants:
+                full_path = os.path.join(root, variant)
+                if os.path.exists(full_path):
+                    self._debug(f"Found MOC file in subdirectory: {full_path}")
+                    return full_path
                     
-        self._debug(f"No matching file found for variants: {variants}")
+            # Also check for partial matches (file contains the base name)
+            for file in files:
+                if file.endswith('.md') and base_name.lower() in file.lower():
+                    full_path = os.path.join(root, file)
+                    self._debug(f"Found partial match in subdirectory: {full_path}")
+                    return full_path
+        
+        self._debug(f"Could not normalize filename: {filename}")
         return None
+        
+    def _custom_walk(self, top):
+        """A custom walk function that follows symlinks."""
+        for root, dirs, files in os.walk(top, followlinks=True):
+            yield root, dirs, files
 
     def get_statistics(self) -> dict:
         """Get statistics about processed files."""
@@ -249,63 +310,94 @@ class ObsidianLinkCollector:
         total_tokens = sum(self._get_token_count(path) for path, _ in self.collected_files)
         
         return {
-            'files': len(self.collected_files),
-            'lines': total_lines,
-            'size': self._format_size(total_size),
-            'tokens': total_tokens
+            'file_count': len(self.collected_files),
+            'total_lines': total_lines,
+            'total_size': self._format_size(total_size),
+            'total_tokens': total_tokens
         }
 
 # Example usage
 if __name__ == "__main__":
     import argparse
-    from datetime import datetime
+    import pyperclip
+    import sys
     
-    parser = argparse.ArgumentParser(description='Collect and process Obsidian links')
-    parser.add_argument('start_file', help='Starting file (e.g., "$ Zettelkasten.md")')
-    parser.add_argument('--vault', default=os.getcwd(), help='Path to Obsidian vault')
-    parser.add_argument('--depth', type=int, default=1, help='Maximum recursion depth')
-    parser.add_argument('--output', help='Output file path (default: temp/aggregate_<notes_title>.txt)')
-    parser.add_argument('--debug', action='store_true', help='Enable debug logging')
+    parser = argparse.ArgumentParser(description='Collect and combine Obsidian notes.')
+    parser.add_argument('input_file', help='The starting note file to process')
+    parser.add_argument('--depth', type=int, default=1, help='Maximum depth of links to follow (default: 1)')
+    parser.add_argument('--vault', help='Path to the Obsidian vault')
+    parser.add_argument('--output', help='Output file path (default: temp/aggregate_<input_filename>.txt)')
+    parser.add_argument('--debug', action='store_true', help='Enable debug output')
+    parser.add_argument('--verbose', action='store_true', help='Enable detailed progress messages')
+    parser.add_argument('--no-clipboard', action='store_true', help='Disable copying to clipboard')
     
     args = parser.parse_args()
     
-    # Create default output path if not specified
-    if not args.output:
-        # Extract base name without extension and special characters
-        base_name = os.path.splitext(os.path.basename(args.start_file))[0]
-        base_name = re.sub(r'[$@= ]', '', base_name)  # Remove special characters
-        os.makedirs('temp', exist_ok=True)
-        args.output = f"temp/aggregate_{base_name}.txt"
+    # Enable verbose mode if debug is enabled
+    if args.debug:
+        args.verbose = True
     
-    collector = ObsidianLinkCollector(
-        vault_path=args.vault,
-        max_depth=args.depth,
-        debug=args.debug
-    )
+    # Determine the vault path
+    vault_path = args.vault
+    if not vault_path:
+        vault_path = os.environ.get('OBSIDIAN_VAULT_PATH')
+        if not vault_path:
+            # Default to current directory
+            vault_path = os.getcwd()
+            print(f"No vault path specified. Using current directory: {vault_path}")
     
-    result = collector.collect_links(args.start_file)
+    if not os.path.exists(vault_path):
+        print(f"Error: Vault path does not exist: {vault_path}")
+        sys.exit(1)
+        
+    if args.verbose:
+        print(f"Using vault path: {vault_path}")
     
-    # Save to file
-    with open(args.output, 'w', encoding='utf-8') as f:
-        f.write(result)
+    # Create the collector
+    collector = ObsidianLinkCollector(vault_path=vault_path, max_depth=args.depth, debug=args.debug)
     
-    # Print statistics to bash
-    stats = collector.get_statistics()
-    print("\nFile Statistics:")
-    print(f"- Total Files: {stats['files']}")
-    print(f"- Total Lines: {stats['lines']}")
-    print(f"- Total Size: {stats['size']}")
-    print(f"- Total Tokens: {stats['tokens']}")
-    print(f"\nResults saved to: {args.output}")
+    # Determine the output path
+    output_filename = args.output
+    if not output_filename:
+        # Get output directory from environment or default to "./temp"
+        output_dir = os.environ.get('O2P_OUTPUT_DIR', os.path.join(os.getcwd(), 'temp'))
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Clean the input filename for use in the output filename
+        clean_name = os.path.basename(args.input_file)
+        if clean_name.endswith('.md'):
+            clean_name = clean_name[:-3]
+        
+        output_filename = os.path.join(output_dir, f"aggregate_{clean_name}.txt")
     
-    # Copy content to clipboard
+    # Process the input file
     try:
-        import pyperclip
-        with open(args.output, 'r', encoding='utf-8') as f:
-            content = f.read()
-        pyperclip.copy(content)
-        print("Content copied to clipboard!")
-    except ImportError:
-        print("Install 'pyperclip' package to enable clipboard functionality")
+        result = collector.collect_links(args.input_file)
+        
+        # Get statistics for printing
+        stats = collector.get_statistics()
+        print("\nFile Statistics:")
+        print(f"- Total Files: {stats['file_count']}")
+        print(f"- Total Lines: {stats['total_lines']}")
+        print(f"- Total Size: {stats['total_size']}")
+        print(f"- Total Tokens: {stats['total_tokens']}")
+        
+        # Save the result to the output file
+        with open(output_filename, 'w', encoding='utf-8') as f:
+            f.write(result)
+        print(f"\nResults saved to: {output_filename}")
+        
+        # Copy to clipboard if enabled
+        if not args.no_clipboard:
+            try:
+                pyperclip.copy(result)
+                print("Content copied to clipboard!")
+            except Exception as e:
+                print(f"Could not copy to clipboard: {e}")
+                
     except Exception as e:
-        print(f"Failed to copy to clipboard: {str(e)}")
+        print(f"Error processing file: {e}")
+        if args.debug:
+            import traceback
+            traceback.print_exc()
+        sys.exit(1)

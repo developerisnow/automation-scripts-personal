@@ -1,0 +1,72 @@
+name: PKM Auto-Commit
+
+on:
+  # Schedule to run every 4 hours
+  schedule:
+    - cron: '0 */4 * * *'
+  
+  # Allow manual trigger
+  workflow_dispatch:
+
+jobs:
+  auto-commit:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          # Fetch all history for all branches and tags
+          fetch-depth: 0
+          # Use PAT instead of GITHUB_TOKEN to trigger workflows
+          token: ${{ secrets.PAT_TOKEN }}
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+      
+      - name: Install OpenCommit
+        run: npm install -g opencommit
+      
+      - name: Configure Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+      
+      - name: Configure OpenCommit
+        run: |
+          # Use your preferred provider
+          # For OpenAI:
+          oco config set OCO_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          
+          # For Anthropic/Claude:
+          # oco config set OCO_API_KEY=${{ secrets.ANTHROPIC_API_KEY }} OCO_AI_PROVIDER=anthropic
+      
+      - name: Check for changes
+        id: check-changes
+        run: |
+          if [[ -z $(git status --porcelain) ]]; then
+            echo "No changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "Changes detected"
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Commit changes with OpenCommit
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: |
+          git add -A
+          oco --yes
+      
+      - name: Push changes
+        if: steps.check-changes.outputs.has_changes == 'true'
+        run: git push origin HEAD:${{ github.ref }}
+
+# Setup Instructions:
+# 1. Add this file to .github/workflows/ in your repository
+# 2. Create a Personal Access Token (PAT) with 'repo' permissions
+# 3. Add the PAT as a repository secret named 'PAT_TOKEN'
+# 4. Add your OpenAI API key as a repository secret named 'OPENAI_API_KEY'
+#    (or use ANTHROPIC_API_KEY if you prefer Claude) 

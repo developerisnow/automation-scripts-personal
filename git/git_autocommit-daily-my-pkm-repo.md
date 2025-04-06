@@ -1,0 +1,1 @@
+/Users/user/____Sandruk/___PKM/_Outputs_AI/git_autocommit-daily-my-pkm-repo.md
