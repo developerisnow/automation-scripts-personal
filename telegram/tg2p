@@ -1,0 +1,15 @@
+#!/bin/bash
+# tg2p - Telegram to Prompt
+# Shell wrapper for messages-tg2prompt-telegram-retriever-handler-tdl-manager.py
+
+# Path to the Python script
+SCRIPT_PATH="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/telegram/messages-tg2prompt-telegram-retriever-handler-tdl-manager.py"
+
+# Check if the script exists
+if [ ! -f "$SCRIPT_PATH" ]; then
+    echo "Error: tg2p script not found at $SCRIPT_PATH"
+    exit 1
+fi
+
+# Forward all arguments to the Python script
+python3 "$SCRIPT_PATH" "$@" 

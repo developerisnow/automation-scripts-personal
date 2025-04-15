@@ -1,2 +1,4 @@
 obsidian/temp/
 ._*
+*.logs
+git/logs/pkm-autocommit.log
