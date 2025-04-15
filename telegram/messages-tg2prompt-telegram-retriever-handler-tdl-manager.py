@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
 """
-Telegram to Prompt Message Retriever (tg2p)
+Telegram Message Retrieval and Processing Utility
 
-This script provides a simple command-line interface for retrieving Telegram chat messages
-and converting them to markdown format for easy consumption.
+This script provides a convenient interface for retrieving and processing Telegram messages
+using the TDLib CLI (tdl) tool. It converts raw JSON output to formatted Markdown for better readability.
+
+Key features:
+- Contact lookup by ID, username, or alias
+- Message retrieval with flexible time filtering (days, weeks, months, etc.)
+- JSON to Markdown conversion with customizable formatting
+- Archive management for previous exports
+- Visualization of message statistics
+
+Dependencies:
+- tdl: Telegram CLI based on TDLib
+- tgJson2Markdown.py: Script for converting JSON to Markdown
 
 Usage examples:
-  tg2p shimanskij 7d     # Retrieve 7 days of messages from shimanskij
-  tg2p shimanskij all    # Retrieve all messages from shimanskij
-  tg2p shimanskij 100    # Retrieve last 100 messages from shimanskij
-  tg2p ilya 1m           # Retrieve 1 month of messages from ilya (uses alias from contacts.csv)
+  python telegram-retriever-handler.py load-contacts
+  python telegram-retriever-handler.py get-messages @username 7d
+  python telegram-retriever-handler.py find-contact john
 
-Time modifiers:
-  d - days (e.g., 7d = 7 days)
-  w - weeks (e.g., 2w = 2 weeks)
-  m - months (e.g., 1m = 1 month)
-  y - years (e.g., 1y = 1 year)
-  h - hours (e.g., 12h = 12 hours)
-  (no suffix) - number of messages (e.g., 100 = last 100 messages)
-  all - all messages
+Author: SecondBrainInc
 """
 import os
 import sys
@@ -59,81 +62,211 @@ TIME_MODIFIERS = {
 }
 
 class Contact:
-    """Represents a Telegram contact with all necessary information."""
-    def __init__(self, namespace: str, user_id: int, username: str, first_name: str = "", 
-                 last_name: str = "", alias: str = ""):
-        self.namespace = namespace
+    """Represents a Telegram contact."""
+    
+    def __init__(self, user_id: str, username: str = '', first_name: str = '', 
+                 last_name: str = '', namespace: str = '', is_bot: bool = False, is_group: bool = False):
         self.user_id = user_id
         self.username = username
         self.first_name = first_name
         self.last_name = last_name
-        self.alias = alias
+        self.namespace = namespace
+        self.is_bot = is_bot
+        self.is_group = is_group
+    
+    @property
+    def display_name(self) -> str:
+        """Return a human-readable name for the contact."""
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        elif self.first_name:
+            return self.first_name
+        elif self.username:
+            return f"@{self.username}"
+        else:
+            return str(self.user_id)
     
     def __str__(self) -> str:
-        return f"Contact(namespace={self.namespace}, user_id={self.user_id}, username={self.username})"
+        return f"{self.display_name} (ID: {self.user_id})"
+    
+    def __repr__(self) -> str:
+        return f"Contact(user_id={self.user_id}, username='{self.username}', first_name='{self.first_name}', last_name='{self.last_name}', namespace='{self.namespace}', is_bot={self.is_bot}, is_group={self.is_group})"
 
 def find_contacts_csv_files(contacts_dir: str) -> List[str]:
-    """Find all contacts CSV files in the contacts directory."""
-    pattern = os.path.join(contacts_dir, "telegram-*-contacts-chats-list.csv")
-    return glob.glob(pattern)
-
-def load_contacts(csv_files: List[str]) -> Dict[str, Contact]:
     """
-    Load contacts from CSV files.
+    Find all contacts CSV files in the contacts directory.
     
+    Args:
+        contacts_dir: Directory to search for contact CSV files
+        
     Returns:
-        Dictionary mapping usernames and aliases to Contact objects
+        List of paths to contact CSV files
+    """
+    if not os.path.exists(contacts_dir):
+        logger.error(f"Contacts directory not found: {contacts_dir}")
+        return []
+        
+    if not os.path.isdir(contacts_dir):
+        logger.error(f"Contacts path is not a directory: {contacts_dir}")
+        return []
+    
+    # Main pattern for contact files
+    pattern = os.path.join(contacts_dir, "telegram-*-contacts-chats-list.csv")
+    files = glob.glob(pattern)
+    
+    # If no files found, also try looking for any CSV files as a fallback
+    if not files:
+        logger.warning(f"No contact files matching pattern {pattern}")
+        csv_pattern = os.path.join(contacts_dir, "*.csv")
+        csv_files = glob.glob(csv_pattern)
+        if csv_files:
+            logger.info(f"Found {len(csv_files)} CSV files in {contacts_dir} that might contain contacts")
+            return csv_files
+    
+    logger.debug(f"Found {len(files)} contact files in {contacts_dir}")
+    return files
+
+def load_aliases(data_dir: str) -> Dict[str, str]:
+    """
+    Load aliases from a CSV file in the data directory. 
+    The CSV should have two columns: alias,user_id
+    
+    Args:
+        data_dir: Directory containing the aliases.csv file
+        
+    Returns:
+        Dictionary mapping aliases to user IDs
+    """
+    aliases_path = os.path.join(data_dir, "aliases.csv")
+    if not os.path.exists(aliases_path):
+        logger.debug(f"Aliases file not found: {aliases_path}")
+        return {}
+        
+    aliases = {}
+    try:
+        with open(aliases_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if 'alias' in row and 'user_id' in row:
+                    aliases[row['alias'].lower().strip()] = row['user_id'].strip()
+    except Exception as e:
+        logger.error(f"Error loading aliases from {aliases_path}: {e}")
+    
+    logger.info(f"Loaded {len(aliases)} aliases from {aliases_path}")
+    return aliases
+
+def load_contacts(data_dir: str) -> Dict[str, Contact]:
+    """
+    Load contacts from the data directory.
+    
+    This function reads contacts from contacts.csv, aliases.csv and chat_aliases.csv
+    
+    Args:
+        data_dir: Directory containing contacts and aliases files
+        
+    Returns:
+        Dictionary mapping user_id/aliases to Contact objects
     """
     contacts = {}
+    contacts_path = os.path.join(data_dir, "contacts.csv")
     
-    for csv_file in csv_files:
-        try:
-            # Extract namespace from filename
-            match = re.search(r'telegram-([^-]+)-contacts', os.path.basename(csv_file))
-            if not match:
-                logger.warning(f"Could not extract namespace from filename: {csv_file}")
-                continue
+    if not os.path.exists(contacts_path):
+        logger.warning(f"Contacts file not found: {contacts_path}")
+        return contacts
+        
+    try:
+        with open(contacts_path, 'r', encoding='utf-8') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if not row.get('user_id'):
+                    continue
                 
-            namespace = match.group(1)
-            logger.debug(f"Processing contacts for namespace: {namespace}")
-            
-            with open(csv_file, 'r', encoding='utf-8') as f:
+                user_id = row['user_id'].strip()
+                
+                # Create contact object
+                contact = Contact(
+                    user_id=user_id,
+                    username=row.get('username', '').strip() if row.get('username') else None,
+                    first_name=row.get('first_name', '').strip(),
+                    last_name=row.get('last_name', '').strip(),
+                    is_bot=row.get('is_bot', '').lower() in ('true', 'yes', '1'),
+                    is_group=row.get('is_group', '').lower() in ('true', 'yes', '1')
+                )
+                
+                # Add to contacts dictionary with user_id as key
+                contacts[user_id] = contact
+                
+                # If username exists, add it as an alias key too
+                if contact.username:
+                    username_key = contact.username.lower()
+                    # Only add if not already a primary key
+                    if username_key not in contacts:
+                        contacts[username_key] = contact
+                        logger.debug(f"Added username alias: {username_key} -> {user_id}")
+    except Exception as e:
+        logger.error(f"Error loading contacts: {str(e)}")
+    
+    # Now load and process aliases
+    aliases = load_aliases(data_dir)
+    alias_count = 0
+    
+    # Add aliases to the contacts dictionary
+    for alias, target_id in aliases.items():
+        if target_id in contacts:
+            if alias not in contacts:  # Avoid overwriting existing keys
+                contacts[alias] = contacts[target_id]
+                alias_count += 1
+                logger.debug(f"Added user alias: {alias} -> {target_id}")
+        else:
+            logger.warning(f"Alias '{alias}' references non-existent user_id: {target_id}")
+    
+    # Add chat aliases (for group chats)
+    chat_aliases_path = os.path.join(data_dir, "chat_aliases.csv")
+    if os.path.exists(chat_aliases_path):
+        chat_alias_count = 0
+        try:
+            with open(chat_aliases_path, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    try:
-                        # Skip rows that don't have required fields
-                        if not row.get('ID') or row.get('Bot') == 'True':
-                            continue
+                    if not row.get('chat_id') or not row.get('alias'):
+                        continue
                         
-                        user_id = int(row['ID'])
-                        username = row.get('Username', '').lower()
-                        
-                        # Create contact object
+                    chat_id = row['chat_id'].strip()
+                    alias = row['alias'].strip().lower()
+                    
+                    logger.debug(f"Processing chat alias: {alias} -> {chat_id}")
+                    
+                    # Check if the chat_id exists in contacts
+                    if chat_id in contacts:
+                        if alias not in contacts:  # Avoid overwriting existing keys
+                            contacts[alias] = contacts[chat_id]
+                            chat_alias_count += 1
+                            logger.debug(f"Added chat alias for existing chat: {alias} -> {chat_id}")
+                    else:
+                        # Create a new contact for this chat_id if it doesn't exist
+                        chat_name = row.get('chat_name', '').strip()
                         contact = Contact(
-                            namespace=namespace,
-                            user_id=user_id,
-                            username=username,
-                            first_name=row.get('First Name', ''),
-                            last_name=row.get('Last Name', '')
+                            user_id=chat_id,
+                            username=None,
+                            first_name=chat_name,
+                            last_name='',
+                            is_bot=False,
+                            is_group=True
                         )
-                        
-                        # Add by username if available
-                        if username:
-                            contacts[username.lower()] = contact
-                        
-                        # Custom logic to add aliases based on name patterns
-                        # This is a placeholder for future alias extraction logic
-                        # For now, we'll just use the existing data
-                        
-                        # Map user_id as string key too
-                        contacts[str(user_id)] = contact
-                    except Exception as e:
-                        logger.debug(f"Error processing contact row: {e}")
+                        contacts[chat_id] = contact
+                        contacts[alias] = contact
+                        chat_alias_count += 1
+                        logger.debug(f"Created new contact for chat and added alias: {alias} -> {chat_id}")
             
+            logger.info(f"Loaded {chat_alias_count} chat aliases")
         except Exception as e:
-            logger.warning(f"Failed to process contacts file {csv_file}: {e}")
+            logger.error(f"Error loading chat aliases: {str(e)}")
+    else:
+        logger.debug(f"Chat aliases file not found: {chat_aliases_path}")
     
-    logger.info(f"Loaded {len(contacts)} contacts from {len(csv_files)} CSV files")
+    # Log all available contact keys at debug level
+    logger.debug(f"Available contact keys: {sorted(list(contacts.keys()))}")
+    logger.info(f"Loaded {len(contacts) - alias_count} contacts with {alias_count} aliases")
     return contacts
 
 def parse_time_modifier(time_spec: str) -> Tuple[str, int, Optional[str]]:
@@ -243,43 +376,82 @@ def run_tdl_command(cmd: List[str]) -> bool:
     """
     Run the tdl command and wait for it to complete.
     
+    Args:
+        cmd: Command to run as a list of strings
+        
     Returns:
         True if successful, False otherwise
     """
-    logger.info(f"Running command: {' '.join(cmd)}")
+    cmd_str = ' '.join(cmd)
+    logger.info(f"Running TDL command: {cmd_str}")
     
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # Timeout after 5 minutes (300 seconds) to prevent hanging
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         
+        # Check return code
         if result.returncode != 0:
-            logger.error(f"Command failed with return code {result.returncode}")
+            logger.error(f"TDL command failed with return code {result.returncode}")
             logger.error(f"Error output: {result.stderr}")
+            # Log a small part of stdout for context if it's available
+            if result.stdout:
+                logger.error(f"Command stdout excerpt: {result.stdout[:200]}...")
             return False
         
-        logger.debug(f"Command output: {result.stdout}")
+        # Log success at debug level
+        logger.debug(f"TDL command stdout: {result.stdout}")
         
         # Check for specific error patterns in stdout (some errors are not reported in return code)
         error_patterns = [
             r"Error:",
             r"failed to get peer",
-            r"rpc error code"
+            r"rpc error code",
+            r"not authorized",
+            r"unauthorized",
+            r"auth failed",
+            r"cannot find"
         ]
         
         for pattern in error_patterns:
-            if re.search(pattern, result.stdout):
-                logger.error(f"Error detected in command output: {pattern}")
-                logger.error(f"Command output: {result.stdout}")
+            if re.search(pattern, result.stdout, re.IGNORECASE):
+                logger.error(f"Error pattern '{pattern}' detected in TDL command output")
+                # Only log the relevant part of the output containing the error
+                error_context = re.search(f".*{pattern}.*", result.stdout, re.IGNORECASE)
+                if error_context:
+                    logger.error(f"Error context: {error_context.group(0)}")
+                else:
+                    logger.error(f"Full command output: {result.stdout}")
                 return False
         
-        # Check if the command seems to have run successfully
-        if "Export completed" in result.stdout:
-            return True
+        # Check for success patterns
+        success_patterns = [
+            r"Export completed",
+            r"completed successfully",
+            r"successfully exported"
+        ]
         
-        logger.warning(f"Command did not report completion correctly. Output: {result.stdout}")
+        for pattern in success_patterns:
+            if re.search(pattern, result.stdout, re.IGNORECASE):
+                logger.info("TDL command completed successfully")
+                return True
+        
+        # If we get here, we didn't find a clear success or error indicator
+        # Check if output file exists and has content
+        output_file_index = cmd.index("-o") + 1 if "-o" in cmd else None
+        if output_file_index and output_file_index < len(cmd):
+            output_file = cmd[output_file_index]
+            if os.path.exists(output_file) and os.path.getsize(output_file) > 0:
+                logger.info(f"TDL command produced output file ({os.path.getsize(output_file)} bytes)")
+                return True
+        
+        logger.warning("TDL command did not report clear completion status, but no errors detected")
         return True  # Assume success if no clear error
         
+    except subprocess.TimeoutExpired:
+        logger.error("TDL command timed out after 5 minutes")
+        return False
     except Exception as e:
-        logger.error(f"Failed to run command: {e}")
+        logger.error(f"Exception running TDL command: {str(e)}")
         return False
 
 def generate_output_filenames(markdown_base_dir: str, raw_json_dir: str, contact: Contact, time_spec: str) -> Tuple[str, str]:
@@ -410,142 +582,96 @@ def determine_date_range_from_time_spec(time_spec: str) -> Tuple[str, str]:
     
     return start_date_str, end_date_str
 
-def convert_json_to_markdown(json2md_script: str, json_file: str, markdown_file: str, time_spec: str, contact: Contact) -> bool:
+def convert_json_to_markdown(script_path: str, json_file: str, markdown_file: str, time_spec: str, contact: Contact) -> bool:
     """
     Convert JSON to markdown using the tgJson2Markdown.py script.
     
     Args:
-        json2md_script: Path to the JSON to markdown conversion script
-        json_file: Path to JSON file
-        markdown_file: Path to output markdown file
-        time_spec: Time specification for determining date range
-        contact: Contact object for user identification
+        script_path: Path to the tgJson2Markdown.py script
+        json_file: Path to the JSON file
+        markdown_file: Path to the output markdown file
+        time_spec: Time specification ('7d', 'all', '100', etc.)
+        contact: Contact object with user info
     
     Returns:
         True if successful, False otherwise
     """
-    # Determine date range
-    start_date, end_date = determine_date_range_from_time_spec(time_spec)
-    
-    # Find the contacts CSV file for this namespace
-    contacts_file = ""
-    for csv_file in glob.glob(os.path.join(DEFAULT_PATHS["contacts_dir"], f"telegram-{contact.namespace}-*.csv")):
-        contacts_file = csv_file
-        break
-    
-    if not contacts_file:
-        logger.warning(f"No contacts CSV file found for namespace {contact.namespace}")
-    else:
-        logger.info(f"Using contacts file: {contacts_file}")
+    if not os.path.exists(json_file):
+        logger.error(f"Input JSON file not found: {json_file}")
+        return False
         
-    # Create a temporary user info file with both the contact's and namespace owner's information
-    # This ensures proper identification of both participants in the conversation
-    temp_user_info_file = os.path.join(os.path.dirname(markdown_file), ".temp_user_info.json")
-    with open(temp_user_info_file, 'w', encoding='utf-8') as f:
-        # Find the namespace owner's details from the CSV files 
-        namespace_owner_data = {
-            "id": None,
-            "first_name": contact.namespace,
-            "last_name": "(You)",
-            "username": contact.namespace,
-            "is_self": True
-        }
+    if not os.path.exists(script_path):
+        logger.error(f"tgJson2Markdown.py script not found: {script_path}")
+        return False
         
-        # Try to get the actual namespace owner ID and info from contacts
-        try:
-            for csv_path in glob.glob(os.path.join(DEFAULT_PATHS["contacts_dir"], "*.csv")):
-                with open(csv_path, 'r', encoding='utf-8') as csv_file:
-                    # Check if this is the file for this namespace
-                    if f"telegram-{contact.namespace}-" in os.path.basename(csv_path):
-                        # Try to find the ID from the file
-                        import csv
-                        csv_reader = csv.DictReader(csv_file)
-                        for row in csv_reader:
-                            if row.get('is_self', '').lower() == 'true' or row.get('is_self', '') == '1':
-                                for id_field in ['id', 'user_id', 'tg_id']:
-                                    if id_field in row and row[id_field]:
-                                        try:
-                                            namespace_owner_data["id"] = int(row[id_field])
-                                            namespace_owner_data["first_name"] = row.get('first_name', row.get('firstname', contact.namespace))
-                                            namespace_owner_data["last_name"] = row.get('last_name', row.get('lastname', '(You)'))
-                                            namespace_owner_data["username"] = row.get('username', contact.namespace)
-                                            break
-                                        except (ValueError, TypeError):
-                                            pass
-                                if namespace_owner_data["id"]:
-                                    break
-                        if namespace_owner_data["id"]:
-                            break
-        except Exception as e:
-            logger.warning(f"Failed to get namespace owner info: {e}")
-        
-        # If we couldn't find the namespace owner's ID, use a default
-        if not namespace_owner_data["id"]:
-            # Use a high number to avoid conflicts with regular user IDs
-            namespace_owner_data["id"] = 999999999
-        
-        # Write both user info entries
-        json.dump({
-            "users": [
-                {
-                    "id": contact.user_id,
-                    "first_name": contact.first_name if contact.first_name else "User",
-                    "last_name": contact.last_name if contact.last_name else "",
-                    "username": contact.username if contact.username else f"user_{contact.user_id}",
-                    "is_self": False
-                },
-                namespace_owner_data
-            ]
-        }, f, ensure_ascii=False)
-    
-    # Build command with both the contacts CSV and the temporary user info file
-    # The script will merge them, prioritizing CSV data if available
-    cmd = [
-        "python3", json2md_script,
-        "--startDate", start_date,
-        "--endDate", end_date,
-        "--userStats=TRUE",
-        "--daysStats=TRUE",
-        "--allMessages=TRUE",
-        "--compactFormat=TRUE",  # Use compact timestamp format
-        f"--namespaceId={namespace_owner_data['id']}"  # Pass namespace owner ID for message attribution
-    ]
-    
-    # Add members file parameter if contacts file exists
-    if contacts_file:
-        cmd.extend(["--membersFile", contacts_file])
-    
-    # Add temp user info file as a fallback
-    cmd.extend(["--userInfoFile", temp_user_info_file])
-    
-    # Add input and output files
-    cmd.extend([json_file, markdown_file])
-    
-    logger.info(f"Converting JSON to markdown: {' '.join(cmd)}")
+    # Make sure the output directory exists
+    os.makedirs(os.path.dirname(markdown_file), exist_ok=True)
     
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True)
+        # Get date range for filtering
+        start_date, end_date = determine_date_range_from_time_spec(time_spec)
         
-        # Clean up temporary file
-        if os.path.exists(temp_user_info_file):
-            os.remove(temp_user_info_file)
+        base_command = [
+            sys.executable, 
+            script_path,
+            json_file,  # input file as positional argument
+            markdown_file,  # output file as positional argument
+            "--startDate", start_date,  # Always provide start date
+        ]
         
-        if result.returncode != 0:
-            logger.error(f"JSON to markdown conversion failed with return code {result.returncode}")
-            logger.error(f"Error output: {result.stderr}")
+        # Add end date (for non-all queries)
+        if time_spec.lower() != 'all':
+            base_command.extend(["--endDate", end_date])
+        
+        # Add compact format option for better readability
+        base_command.extend(["--compactFormat", "TRUE"])
+        
+        # Add namespace ID
+        base_command.extend(["--namespaceId", str(contact.user_id)])
+        
+        # Add additional options based on time specification type
+        filter_type, value, modifier = parse_time_modifier(time_spec)
+        
+        if filter_type == 'last' and not modifier:
+            # If it's just a message count (like "100"), add max messages filter
+            base_command.extend(['--maxMessages', str(value)])
+        
+        # Add display name information if available
+        if contact.first_name:
+            name_override = contact.first_name
+            if contact.last_name:
+                name_override += " " + contact.last_name
+            base_command.extend(['--firstNameOverride', name_override])
+            
+        if contact.username:
+            base_command.extend(['--usernameOverride', contact.username])
+            
+        # Log the command
+        logger.info(f"Running tgJson2Markdown.py command: {' '.join(base_command)}")
+        
+        # Run the command
+        process = subprocess.run(base_command, capture_output=True, text=True, timeout=300)
+        
+        if process.returncode != 0:
+            logger.error(f"Failed to convert JSON to markdown: {process.stderr}")
+            logger.error(f"Command output: {process.stdout[:200]}...")
             return False
         
-        # Process the markdown to apply compact timestamp format
-        post_process_markdown(markdown_file)
-        
+        # Check if output file was created
+        if not os.path.exists(markdown_file):
+            logger.error(f"Markdown file was not created: {markdown_file}")
+            return False
+            
         logger.info(f"Successfully converted JSON to markdown: {markdown_file}")
+        logger.debug(f"Command output: {process.stdout}")
         return True
-        
+    except subprocess.TimeoutExpired:
+        logger.error("JSON to markdown conversion timed out after 5 minutes")
+        return False
     except Exception as e:
-        logger.error(f"Failed to run JSON to markdown conversion: {e}")
-        # Clean up temporary file in case of error
-        if os.path.exists(temp_user_info_file):
-            os.remove(temp_user_info_file)
+        logger.error(f"Error converting JSON to markdown: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
         return False
 
 def post_process_markdown(markdown_file: str) -> None:
@@ -656,40 +782,67 @@ def add_mermaid_chart_to_markdown(markdown_file: str) -> None:
     except Exception as e:
         logger.warning(f"Failed to add mermaid chart to {markdown_file}: {e}")
 
-def process_command(identifier: str, time_spec: str = "1d", paths: Dict[str, str] = None) -> bool:
+def extract_namespace_from_csv_path(csv_path: str) -> Optional[str]:
     """
-    Process a tg2p command.
+    Extract namespace from a CSV file path.
+    
+    The function attempts to extract the namespace from the filename pattern:
+    - 'telegram-{namespace}-contacts-chats-list.csv'
+    - If that fails, it looks for any identifier in the filename
     
     Args:
-        identifier: Username or alias
-        time_spec: Time specification ('7d', 'all', '100', etc.)
-        paths: Dictionary of paths to use
+        csv_path: Path to the CSV file
+        
+    Returns:
+        Namespace string or None if not found
+    """
+    try:
+        filename = os.path.basename(csv_path)
+        
+        # Try the standard pattern first
+        match = re.search(r'telegram-([^-]+)-contacts-chats-list\.csv', filename)
+        if match:
+            namespace = match.group(1)
+            logger.debug(f"Extracted namespace '{namespace}' from {filename}")
+            return namespace
+            
+        # If that doesn't work, try a more generic approach for any CSV
+        if filename.endswith('.csv'):
+            # Try to extract any word that might be a namespace
+            parts = filename.replace('.csv', '').split('-')
+            if len(parts) > 1:
+                # Use the second part (after the first hyphen) as a potential namespace
+                namespace = parts[1]
+                logger.warning(f"Using potential namespace '{namespace}' from {filename} (non-standard format)")
+                return namespace
+            elif len(parts) == 1:
+                # If there's only one part, use that (minus extension)
+                namespace = parts[0]
+                logger.warning(f"Using filename '{namespace}' as namespace (non-standard format)")
+                return namespace
+        
+        # If we're here, we couldn't find a namespace
+        logger.warning(f"Could not extract namespace from {filename}, using 'default'")
+        return "default"  # Use a default namespace rather than returning None
+        
+    except Exception as e:
+        logger.error(f"Error extracting namespace from {csv_path}: {e}")
+        logger.debug(f"Using 'error' as namespace due to exception: {str(e)}")
+        return "error"  # Use an error namespace instead of None
+
+def process_messages_for_contact(contact: Contact, time_spec: str) -> bool:
+    """
+    Process messages for a specific contact.
     
+    Args:
+        contact: Contact object
+        time_spec: Time specification ('7d', 'all', '100', etc.)
+        
     Returns:
         True if successful, False otherwise
     """
-    if paths is None:
-        paths = DEFAULT_PATHS
-        
     try:
-        # Find all contact CSV files
-        csv_files = find_contacts_csv_files(paths["contacts_dir"])
-        if not csv_files:
-            logger.error("No contact CSV files found")
-            return False
-        
-        # Load contacts
-        contacts = load_contacts(csv_files)
-        
-        # Find contact by identifier
-        identifier = identifier.lower()
-        contact = contacts.get(identifier)
-        
-        if not contact:
-            logger.error(f"Contact not found: {identifier}")
-            return False
-        
-        logger.info(f"Found contact: {contact}")
+        paths = DEFAULT_PATHS
         
         # Parse time modifier
         filter_type, value, modifier = parse_time_modifier(time_spec)
@@ -743,65 +896,329 @@ def process_command(identifier: str, time_spec: str = "1d", paths: Dict[str, str
             logger.error("Failed to convert JSON to markdown")
             return False
         
-        logger.info(f"Successfully processed command: tg2p {identifier} {time_spec}")
+        logger.info(f"Successfully processed messages for contact: {contact}")
         return True
         
     except Exception as e:
-        logger.error(f"Error processing command: {e}")
+        logger.error(f"Error processing messages for contact: {e}")
         import traceback
         logger.debug(traceback.format_exc())
         return False
 
-def main():
-    parser = argparse.ArgumentParser(
-        description='Telegram to Prompt Message Retriever (tg2p)',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  tg2p shimanskij 7d     # Retrieve 7 days of messages from shimanskij
-  tg2p shimanskij all    # Retrieve all messages from shimanskij
-  tg2p shimanskij 100    # Retrieve last 100 messages from shimanskij
-  tg2p ilya 1m           # Retrieve 1 month of messages from ilya
+def find_contact_by_identifier(identifier: str, contacts: Dict[str, Contact]) -> Optional[Contact]:
+    """
+    Find a contact by identifier (user_id, username, or alias).
+    
+    The search prioritizes in this order:
+    1. Direct match on identifier as user_id/tg_id
+    2. Direct match on identifier as alias
+    3. Match on username (normalized to lowercase without @)
+    4. Partial match on first_name or last_name
+    
+    Args:
+        identifier: The identifier to search for
+        contacts: Dictionary of contacts
+        
+    Returns:
+        Contact object if found, None otherwise
+    """
+    if not identifier or not contacts:
+        logger.warning(f"Empty identifier or contacts dictionary: identifier='{identifier}', contacts_count={len(contacts) if contacts else 0}")
+        return None
+    
+    # Try to parse as integer user_id first if it looks like a number
+    try:
+        if identifier.isdigit():
+            numeric_id = identifier
+            # Check if numeric id is in contacts
+            if numeric_id in contacts:
+                logger.debug(f"Found contact by numeric user_id: {numeric_id}")
+                return contacts[numeric_id]
+    except (ValueError, AttributeError):
+        # Not a numeric ID, continue with string-based search
+        pass
+    
+    # Normalize identifier
+    normalized_identifier = identifier.lower()
+    if normalized_identifier.startswith('@'):
+        normalized_identifier = normalized_identifier[1:]
+    
+    logger.debug(f"Looking for identifier: '{normalized_identifier}' in {len(contacts)} contacts")
+    
+    # 1. Check if the identifier directly matches a user_id
+    for contact in contacts.values():
+        if contact.user_id and contact.user_id.lower() == normalized_identifier:
+            logger.debug(f"Found contact by direct user_id match: {normalized_identifier} -> {contact}")
+            return contact
+    
+    # 2. Direct match on keys in contacts dictionary (which can be aliases)
+    if normalized_identifier in contacts:
+        logger.debug(f"Found contact by alias match: {normalized_identifier} -> {contacts[normalized_identifier]}")
+        return contacts[normalized_identifier]
+    
+    # For other match types, we need to search through all contacts
+    potential_matches = []
+    
+    for contact in contacts.values():
+        # Skip duplicate contact objects (due to aliases)
+        if contact in potential_matches:
+            continue
+            
+        # 3. Match on username
+        if contact.username and contact.username.lower() == normalized_identifier:
+            logger.debug(f"Found contact by username: {normalized_identifier} -> {contact}")
+            return contact
+            
+        # 4. Collect partial matches on first_name or last_name for later
+        if contact.first_name and normalized_identifier in contact.first_name.lower():
+            potential_matches.append(contact)
+        elif contact.last_name and normalized_identifier in contact.last_name.lower():
+            potential_matches.append(contact)
+    
+    # If we have exactly one potential match, return it
+    if len(potential_matches) == 1:
+        logger.debug(f"Found contact by partial name match: {normalized_identifier} -> {potential_matches[0]}")
+        return potential_matches[0]
+    # If we have multiple potential matches, log a warning and return the first one
+    elif len(potential_matches) > 1:
+        logger.warning(f"Multiple contacts matched '{identifier}', using first match: {potential_matches[0]}")
+        return potential_matches[0]
+    
+    logger.warning(f"Contact not found: '{identifier}'")
+    return None
 
-Time modifiers:
-  d - days (e.g., 7d = 7 days)
-  w - weeks (e.g., 2w = 2 weeks)
-  m - months (e.g., 1m = 1 month)
-  y - years (e.g., 1y = 1 year)
-  h - hours (e.g., 12h = 12 hours)
-  (no suffix) - number of messages (e.g., 100 = last 100 messages)
-  all - all messages
-""")
-    parser.add_argument('identifier', help='Username or alias of the contact')
-    parser.add_argument('time_spec', nargs='?', default='1d', 
-                        help='Time specification (e.g., 7d, 2w, 1m, 100, all)')
-    parser.add_argument('--tdl-path', default=DEFAULT_PATHS["tdl_path"],
-                        help=f'Path to tdl executable (default: {DEFAULT_PATHS["tdl_path"]})')
-    parser.add_argument('--contacts-dir', default=DEFAULT_PATHS["contacts_dir"],
-                        help=f'Directory containing contacts CSV files (default: {DEFAULT_PATHS["contacts_dir"]})')
-    parser.add_argument('--raw-json-dir', default=DEFAULT_PATHS["raw_json_dir"],
-                        help=f'Directory for storing raw JSON files (default: {DEFAULT_PATHS["raw_json_dir"]})')
-    parser.add_argument('--markdown-dir', default=DEFAULT_PATHS["markdown_base_dir"],
-                        help=f'Base directory for storing markdown files (default: {DEFAULT_PATHS["markdown_base_dir"]})')
-    parser.add_argument('--log-level', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
-                       default='INFO', help='Set logging level')
+def process_command(command: str) -> None:
+    """
+    Process a tg2p command.
+    
+    Args:
+        command: Command string to process
+    """
+    parts = command.strip().split()
+    
+    if len(parts) < 2:
+        logger.error("Invalid command format. Usage: tg2p <identifier> <timespec>")
+        print("Invalid command format. Usage: tg2p <identifier> <timespec>")
+        print("  - identifier: username, alias, or chat ID")
+        print("  - timespec: 'all', '7d' (7 days), '30d' (30 days), or a number (last N messages)")
+        return
+    
+    identifier = parts[1].lower()
+    time_spec = parts[2] if len(parts) > 2 else "7d"
+    
+    # Set log level to debug temporarily for this command
+    original_log_level = logger.level
+    logger.setLevel(logging.DEBUG)
+    
+    # Load all contacts from all CSV files
+    contacts = {}
+    csv_files = find_contacts_csv_files(DEFAULT_PATHS["contacts_dir"])
+    
+    if not csv_files:
+        logger.error(f"No contact CSV files found in {DEFAULT_PATHS['contacts_dir']}")
+        print(f"No contact CSV files found in {DEFAULT_PATHS['contacts_dir']}")
+        print(f"Expected file pattern: telegram-*-contacts-chats-list.csv")
+        return
+        
+    logger.debug(f"Found {len(csv_files)} contact CSV files: {csv_files}")
+    
+    for csv_file in csv_files:
+        namespace = extract_namespace_from_csv_path(csv_file)
+        logger.debug(f"Processing contacts from namespace '{namespace}' in file {os.path.basename(csv_file)}")
+        
+        # Read the CSV file directly
+        try:
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                # First, peek at the file to determine the format
+                header = f.readline().strip()
+                f.seek(0)  # Go back to the beginning
+                
+                # Check if it's the newer format with many columns or the older format
+                is_new_format = False
+                
+                # Look for column names that would indicate the format
+                if '"tg_session"' in header or 'tg_session' in header or 'ID' in header:
+                    is_new_format = True
+                    logger.debug(f"Detected new CSV format in {os.path.basename(csv_file)}")
+                
+                # Process according to the detected format
+                reader = csv.reader(f)
+                headers = next(reader)  # Skip header row
+                
+                # Find the index of relevant columns
+                if is_new_format:
+                    # New format with many columns (usually from telethon export)
+                    id_idx = 1  # Usually the ID column is the second one (index 1)
+                    username_idx = 2  # Usually Username is the third column
+                    alias_idx = 3  # The Alias column is 4th
+                    first_name_idx = 7  # First Name is typically the 8th column
+                    last_name_idx = 8  # Last Name is typically the 9th column
+                    is_bot_idx = 16  # Bot column is usually around here
+                    is_group_idx = None  # Need to determine based on "Type" column
+                    type_idx = 5  # Type column indicates if it's a User, Bot, Group, etc.
+                    
+                    # Try to find these columns by name if they exist in headers
+                    for i, col in enumerate(headers):
+                        col = col.strip('"').lower()
+                        if col == 'id':
+                            id_idx = i
+                        elif col == 'username':
+                            username_idx = i
+                        elif col == 'alias':
+                            alias_idx = i
+                        elif col in ('first name', 'firstname'):
+                            first_name_idx = i
+                        elif col in ('last name', 'lastname'):
+                            last_name_idx = i
+                        elif col == 'bot':
+                            is_bot_idx = i
+                        elif col == 'type':
+                            type_idx = i
+                else:
+                    # Old format - assume simple user_id,username,first_name,last_name order
+                    id_idx = 0
+                    username_idx = 1
+                    alias_idx = None
+                    first_name_idx = 2
+                    last_name_idx = 3
+                    is_bot_idx = None
+                    is_group_idx = None
+                    type_idx = None
+                
+                # Now process the rows
+                for row in reader:
+                    # Skip empty rows
+                    if not row or len(row) <= id_idx:
+                        continue
+                    
+                    # Extract values, handling potential missing columns
+                    user_id = row[id_idx].strip() if id_idx < len(row) else ""
+                    username = row[username_idx].strip() if username_idx < len(row) and len(row) > username_idx else ""
+                    alias = row[alias_idx].strip() if alias_idx is not None and alias_idx < len(row) and len(row) > alias_idx else ""
+                    first_name = row[first_name_idx].strip() if first_name_idx < len(row) and len(row) > first_name_idx else ""
+                    last_name = row[last_name_idx].strip() if last_name_idx < len(row) and len(row) > last_name_idx else ""
+                    
+                    # Skip entries without valid user ID
+                    if not user_id or not user_id.strip():
+                        continue
+                    
+                    # Determine if it's a bot
+                    is_bot = False
+                    if is_bot_idx is not None and is_bot_idx < len(row):
+                        is_bot = row[is_bot_idx].lower() in ('true', 'yes', '1', 't')
+                    
+                    # Determine if it's a group
+                    is_group = False
+                    if type_idx is not None and type_idx < len(row):
+                        is_group = row[type_idx].lower() in ('group', 'supergroup', 'channel')
+                    
+                    # Create contact object with namespace
+                    contact = Contact(
+                        user_id=user_id,
+                        username=username if username and username != "None" else None,
+                        first_name=first_name if first_name and first_name != "None" else "",
+                        last_name=last_name if last_name and last_name != "None" else "",
+                        namespace=namespace,
+                        is_bot=is_bot,
+                        is_group=is_group
+                    )
+                    
+                    # Add to contacts dictionary with user_id as key
+                    contacts[user_id] = contact
+                    
+                    # If username exists, add it as an alias key too
+                    if contact.username:
+                        username_key = contact.username.lower()
+                        # Only add if not already a primary key
+                        if username_key not in contacts:
+                            contacts[username_key] = contact
+                            logger.debug(f"Added username alias: {username_key} -> {user_id}")
+                    
+                    # If alias exists in the new format, add it as an alias key
+                    if alias and alias != "None":
+                        alias_key = alias.lower()
+                        if alias_key not in contacts:
+                            contacts[alias_key] = contact
+                            logger.debug(f"Added custom alias: {alias_key} -> {user_id}")
+                
+                logger.info(f"Loaded {len(contacts)} contacts from {os.path.basename(csv_file)}")
+        except Exception as e:
+            logger.error(f"Failed to load contacts from {csv_file}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+    
+    # Restore original log level
+    logger.setLevel(original_log_level)
+    
+    # Check if we found any contacts at all
+    if not contacts:
+        logger.error("No contacts were loaded from any files. Check that your contact CSV files exist and are formatted correctly.")
+        print("No contacts were loaded. Check that your contact CSV files exist and are formatted correctly.")
+        print(f"Expected file pattern: {DEFAULT_PATHS['contacts_dir']}/telegram-*-contacts-chats-list.csv")
+        return
+        
+    logger.debug(f"Looking for contact with identifier: {identifier}")
+    contact = find_contact_by_identifier(identifier, contacts)
+    
+    if not contact:
+        logger.error(f"Contact not found: {identifier}")
+        print(f"Contact not found: {identifier}")
+        print("Available contacts (showing up to 10):")
+        # Print a few available contacts to help the user
+        contacts_list = list(set(contacts.values()))  # Remove duplicates
+        if contacts_list:
+            for i, c in enumerate(sorted(contacts_list, key=lambda x: x.display_name)[:10]):
+                print(f"- {c.display_name} (username: {c.username}, id: {c.user_id})")
+            if len(contacts_list) > 10:
+                print(f"... and {len(contacts_list) - 10} more")
+        else:
+            print("No contacts available. Check your contact files.")
+        return
+    
+    logger.info(f"Processing messages for contact: {contact}")
+    process_messages_for_contact(contact, time_spec)
+
+def main():
+    """
+    Main function.
+    """
+    parser = argparse.ArgumentParser(description='Process Telegram messages for a contact')
+    parser.add_argument('identifier', help='Username, alias, or chat ID')
+    parser.add_argument('time_spec', nargs='?', default='7d', help='Time specification (default: 7d)')
+    parser.add_argument('--contacts-dir', help='Directory containing contact CSV files')
+    parser.add_argument('--markdown-dir', help='Base directory for markdown output')
+    parser.add_argument('--raw-json-dir', help='Directory for raw JSON output')
+    parser.add_argument('--tdl-path', help='Path to tdl executable')
+    parser.add_argument('--json2md-script', help='Path to JSON to markdown conversion script')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
+    parser.add_argument('--debug', '-d', action='store_true', help='Enable debug output')
     
     args = parser.parse_args()
     
-    # Set log level
-    logger.setLevel(getattr(logging, args.log_level))
+    # Set up logging
+    if args.debug:
+        logger.setLevel(logging.DEBUG)
+    elif args.verbose:
+        logger.setLevel(logging.INFO)
     
-    # Create custom paths dict with command-line overrides
+    # Set up custom paths if specified
     custom_paths = DEFAULT_PATHS.copy()
-    custom_paths["tdl_path"] = args.tdl_path
-    custom_paths["contacts_dir"] = args.contacts_dir
-    custom_paths["raw_json_dir"] = args.raw_json_dir
-    custom_paths["markdown_base_dir"] = args.markdown_dir
+    if args.contacts_dir:
+        custom_paths["contacts_dir"] = args.contacts_dir
+    if args.markdown_dir:
+        custom_paths["markdown_base_dir"] = args.markdown_dir
+    if args.raw_json_dir:
+        custom_paths["raw_json_dir"] = args.raw_json_dir
+    if args.tdl_path:
+        custom_paths["tdl_path"] = args.tdl_path
+    if args.json2md_script:
+        custom_paths["json2md_script"] = args.json2md_script
     
     # Process command with custom paths
-    success = process_command(args.identifier, args.time_spec, custom_paths)
+    command = f"tg2p {args.identifier} {args.time_spec}"
+    process_command(command)
     
-    return 0 if success else 1
+    return 0
 
 if __name__ == '__main__':
     sys.exit(main())

@@ -3,13 +3,23 @@
 # Shell wrapper for messages-tg2prompt-telegram-retriever-handler-tdl-manager.py
 
 # Path to the Python script
-SCRIPT_PATH="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/telegram/messages-tg2prompt-telegram-retriever-handler-tdl-manager.py"
+HANDLER_SCRIPT="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/telegram/messages-tg2prompt-telegram-retriever-handler-tdl-manager.py"
+
+# Usage: tg2p <identifier> <time>
+# Example: tg2p shimanskij 7d
+# Example: tg2p shimanskij all
 
 # Check if the script exists
-if [ ! -f "$SCRIPT_PATH" ]; then
-    echo "Error: tg2p script not found at $SCRIPT_PATH"
+if [ ! -f "$HANDLER_SCRIPT" ]; then
+    echo "Error: tg2p handler script not found at $HANDLER_SCRIPT"
     exit 1
 fi
 
-# Forward all arguments to the Python script
-python3 "$SCRIPT_PATH" "$@" 
+# Set default time_spec to 7d if not provided
+if [ "$#" -eq 1 ]; then
+    echo "No time specified, using default: 7d"
+    python3 "$HANDLER_SCRIPT" "$1" "7d" --debug
+else
+    # Forward all arguments to the Python handler script
+    python3 "$HANDLER_SCRIPT" "$@" --debug
+fi 
