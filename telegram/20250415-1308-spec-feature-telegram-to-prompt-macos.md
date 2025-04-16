@@ -167,3 +167,26 @@ options:
   - Direct messages (one-on-one chats)
   - Group chats
   - Channels
+
+## 2025-04-17: Added DayLastContacted Tracking
+- [x] Added automatic updating of the "DayLastContacted" field in contact CSV files
+- [x] The field is updated to the current date when messages are retrieved for a contact
+- [x] This allows tracking of:
+  - When a contact was last accessed through the tg2p tool
+  - Frequency of interactions with specific contacts or groups
+  - Historical data for contact activity analysis
+- [x] The feature works with all CSV files that have the DayLastContacted column
+- [x] Implementation details:
+  - Added a new function `update_day_last_contacted` to handle CSV updates
+  - Modified the `process_messages_for_contact` function to call the update function
+  - Uses the current date (YYYY-MM-DD format) for the DayLastContacted field
+  - Handles errors gracefully if CSV files are missing or malformed
+  - Updates both the main contacts file and any namespace-specific files
+
+## 2025-04-17: Added CSV File Format Support Improvements
+- [x] Enhanced CSV file processing to handle different formats:
+  - Standard format: `telegram-{namespace}-contacts-chats-list.csv`
+  - Additional support for any CSV file with ID and DayLastContacted columns
+- [x] Automatic detection of column layouts across different CSV formats
+- [x] Improved error handling for malformed or incomplete CSV files
+- [x] Added logging for CSV file operations to track updates

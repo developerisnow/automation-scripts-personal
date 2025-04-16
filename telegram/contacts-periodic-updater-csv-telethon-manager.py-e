@@ -16,13 +16,10 @@ SESSIONS_DIR = os.path.join(PROJECT_ROOT, "env", "tg_sessions")
 OUTPUT_DIR = "/Users/user/____Sandruk/___PKM/__Vaults_Databases/__People__vault/DatabaseContacts"
 
 # Configuration
-MAX_TODAY_CHATS = 100  # Лимит на количество чатов, которые могут получить сегодняшнюю дату за один запуск скрипта (Max # of chats to mark with today's date in one run)
+MAX_TODAY_CHATS = 100  # Лимит на количество чатов, которые могут получить сегодняшнюю дату за один запуск скрипта
 
 # Store chat order history for tracking changes
 CHAT_ORDER_FILE = os.path.join(OUTPUT_DIR, "telegram-chat-orders.json")
-
-# Initialization file for first-time chat date assignment
-INIT_FILE = os.path.join(OUTPUT_DIR, "telegram-chat-orders-init.json")
 
 # Ensure output directory exists
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -147,46 +144,6 @@ def get_previous_chat_order(session_name):
         logging.warning(f"Error reading previous chat order: {str(e)}")
     
     return {}
-
-def load_chat_date_init_mapping():
-    """
-    Load chat date mappings from the initialization file.
-    This file is used only once for initial setup of chat dates.
-    
-    The file should contain:
-    - position_ranges: list of objects with max_position and date
-    - default_date: date to use for chats not in any range
-    
-    Returns dict with position ranges and default date
-    """
-    if not os.path.exists(INIT_FILE):
-        logging.info(f"Initialization file not found: {INIT_FILE}")
-        return None
-    
-    try:
-        with open(INIT_FILE, 'r') as f:
-            init_data = json.load(f)
-            
-        if 'position_ranges' not in init_data or 'default_date' not in init_data:
-            logging.warning("Initialization file missing required fields")
-            return None
-        
-        # Get position ranges
-        position_ranges = init_data.get('position_ranges', [])
-        default_date = init_data.get('default_date')
-        
-        # Sort ranges by max_position, highest first
-        position_ranges.sort(key=lambda x: x.get('max_position', 0))
-        
-        logging.info(f"Loaded initialization data with {len(position_ranges)} position ranges")
-        return {
-            'position_ranges': position_ranges,
-            'default_date': default_date
-        }
-        
-    except Exception as e:
-        logging.warning(f"Error loading chat date initialization data: {str(e)}")
-        return None
 
 def get_global_today_chat_counter():
     """
@@ -385,24 +342,9 @@ def run_telegram_for_session(session_name):
                 today_date = datetime.now().strftime("%Y-%m-%d")
                 yesterday_date = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
                 
-                # Check if we need to load boundary data for initialization
-                # Count how many rows have empty DayLastContacted values
-                empty_date_count = sum(1 for row in rows if len(row) > 0 and len(row) < len(expected_headers))
-                
-                # If many rows have empty dates, load initialization data
-                init_boundaries = None
-                if empty_date_count > len(rows) * 0.5:  # If more than 50% need initialization
-                    logging.info(f"Found {empty_date_count} rows without dates, loading initialization data")
-                    init_boundaries = load_chat_date_init_mapping()
-                    if init_boundaries:
-                        logging.info(f"Loaded initialization data with position ranges: {init_boundaries['position_ranges']}")
-                        logging.info(f"First 30 chats will get date 2025-04-16, next 30 will get 2025-04-15, etc.")
-                    else:
-                        logging.info("No initialization data found, will use default dates")
-                
-                # Get count of chats already marked with today's date
+                # Get count of chats already marked with today's date across all CSV files
                 today_count, today_chats_dict = get_global_today_chat_counter()
-                logging.info(f"Found {today_count} chats already marked with today's date")
+                logging.info(f"Using limit of {MAX_TODAY_CHATS} chats with today's date (currently {today_count})")
                 
                 # Calculate how many more chats we can mark with today's date
                 remaining_today_slots = max(0, MAX_TODAY_CHATS - today_count)
@@ -454,15 +396,15 @@ def run_telegram_for_session(session_name):
                     # Сортируем активные чаты по порядку, чтобы приоритизировать самые активные
                     active_today_chats.sort(key=lambda x: x[2])
                     
-                    # Все активные чаты будут помечены сегодняшней датой
+                    # Ограничиваем число чатов, которые получат сегодняшнюю дату
+                    active_today_chats = active_today_chats[:remaining_today_slots]
                     new_today_chat_ids = {chat_id for chat_id, _, _ in active_today_chats}
                     
-                    logging.info(f"Will mark {len(new_today_chat_ids)} active chats with today's date in this session")
+                    logging.info(f"Will mark {len(new_today_chat_ids)} chats with today's date in this session")
                     
                     # Второй проход - обновляем даты
                     preserved_dates_count = 0
                     updated_today_count = 0
-                    init_applied_count = 0
                     for row_index, row in enumerate(rows):
                         # First check if the row already has all fields
                         if len(row) >= len(expected_headers):
@@ -482,17 +424,10 @@ def run_telegram_for_session(session_name):
                         # Если чат уже помечен с сегодняшней датой, оставляем как есть
                         if current_day_contacted == today_date:
                             preserved_dates_count += 1
-                        # Если чат в списке для присвоения сегодняшней даты (активный)
+                        # Если чат в списке для присвоения сегодняшней даты
                         elif chat_id in new_today_chat_ids:
                             new_row[day_contacted_index] = today_date
                             updated_today_count += 1
-                        # Если еще нет даты и есть данные инициализации, используем их
-                        elif not current_day_contacted and init_boundaries:
-                            # Определяем дату на основе границ из файла инициализации
-                            new_row[day_contacted_index] = get_date_for_chat_by_position(
-                                chat_id, row_index + 1, init_boundaries
-                            )
-                            init_applied_count += 1
                         # Если еще нет даты, ставим вчерашнюю
                         elif not current_day_contacted:
                             new_row[day_contacted_index] = yesterday_date
@@ -504,13 +439,6 @@ def run_telegram_for_session(session_name):
                             if was_active_today and order_position < 10:
                                 new_row[-1] = today_date
                                 updated_today_count += 1
-                            # If no date set yet and we have initialization data
-                            elif not new_row[-1] and init_boundaries:
-                                # Use initialization data boundaries
-                                new_row[-1] = get_date_for_chat_by_position(
-                                    chat_id, row_index + 1, init_boundaries
-                                )
-                                init_applied_count += 1
                             elif not new_row[-1]:
                                 # If no date set yet, use yesterday's date for old chats
                                 yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -522,13 +450,6 @@ def run_telegram_for_session(session_name):
                             if was_active_today:
                                 new_row[-1] = today_date
                                 updated_today_count += 1
-                            # If no date set yet and we have initialization data
-                            elif not new_row[-1] and init_boundaries:
-                                # Use initialization data boundaries
-                                new_row[-1] = get_date_for_chat_by_position(
-                                    chat_id, row_index + 1, init_boundaries
-                                )
-                                init_applied_count += 1
                             elif not new_row[-1]:
                                 # Default to yesterday if no date is set yet
                                 new_row[-1] = yesterday
@@ -540,8 +461,6 @@ def run_telegram_for_session(session_name):
                         csv_writer.writerow(row_strings)
                     
                     logging.info(f"Date assignment summary: {preserved_dates_count} chats already had today's date, {updated_today_count} chats were marked with today's date, {len(rows) - preserved_dates_count - updated_today_count} chats maintained their historical dates")
-                    if init_applied_count > 0:
-                        logging.info(f"Initialization applied to {init_applied_count} chats using position-based ranges")
                 # Old header format missing Alias and Type
                 elif 'Alias' not in headers and 'Type' not in headers and len(headers) >= 4:
                     # This is the old format without Alias and Type
@@ -560,7 +479,6 @@ def run_telegram_for_session(session_name):
                     count = 0
                     preserved_dates_count = 0
                     updated_today_count = 0
-                    init_applied_count = 0
                     for row_index, row in enumerate(rows):
                         if len(row) >= 4:  # Ensure we have at least ID, Username, Title
                             new_row = [
@@ -635,13 +553,6 @@ def run_telegram_for_session(session_name):
                                 if was_active_today and order_position < 10:
                                     new_row[-1] = today_date
                                     updated_today_count += 1
-                                # If no date set yet and we have initialization data
-                                elif not new_row[-1] and init_boundaries:
-                                    # Use initialization data boundaries
-                                    new_row[-1] = get_date_for_chat_by_position(
-                                        chat_id, row_index + 1, init_boundaries
-                                    )
-                                    init_applied_count += 1
                                 elif not new_row[-1]:
                                     # If no date set yet, use yesterday's date for old chats
                                     yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
@@ -653,13 +564,6 @@ def run_telegram_for_session(session_name):
                                 if was_active_today:
                                     new_row[-1] = today_date
                                     updated_today_count += 1
-                                # If no date set yet and we have initialization data
-                                elif not new_row[-1] and init_boundaries:
-                                    # Use initialization data boundaries
-                                    new_row[-1] = get_date_for_chat_by_position(
-                                        chat_id, row_index + 1, init_boundaries
-                                    )
-                                    init_applied_count += 1
                                 elif not new_row[-1]:
                                     # Default to yesterday if no date is set yet
                                     new_row[-1] = yesterday
@@ -677,8 +581,6 @@ def run_telegram_for_session(session_name):
                     save_chat_order(session_name_without_ext, current_chat_order)
                     
                     logging.info(f"Date assignment summary: {preserved_dates_count} chats already had today's date, {updated_today_count} chats were marked with today's date, {count - preserved_dates_count - updated_today_count} chats maintained their historical dates")
-                    if init_applied_count > 0:
-                        logging.info(f"Initialization applied to {init_applied_count} chats using position-based ranges")
                     logging.info(f"Converted and wrote {count} records to destination")
                 # Other formats
                 else:
@@ -699,36 +601,6 @@ def run_telegram_for_session(session_name):
     finally:
         elapsed_time = time.time() - start_time
         logging.info(f"Completed process for {session_name_without_ext} in {elapsed_time:.2f} seconds")
-
-def get_date_for_chat_by_position(chat_id, chat_position, init_data=None):
-    """
-    Determine the appropriate date for a chat based on its position in the list.
-    Only used during initial setup when DayLastContacted is empty.
-    
-    Args:
-        chat_id: The Telegram chat ID (not used for comparison)
-        chat_position: The position of the chat in the list (1-based)
-        init_data: Dict with position_ranges and default_date
-        
-    Returns:
-        A date string in YYYY-MM-DD format
-    """
-    if not init_data or 'position_ranges' not in init_data:
-        # Default to yesterday if no initialization data
-        return (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-    
-    # Get position ranges and default date
-    position_ranges = init_data.get('position_ranges', [])
-    default_date = init_data.get('default_date')
-    
-    # Find the appropriate date based on position
-    for range_data in position_ranges:
-        max_position = range_data.get('max_position', 0)
-        if chat_position <= max_position:
-            return range_data.get('date')
-    
-    # If no matching range, use default date
-    return default_date
 
 def main():
     parser = argparse.ArgumentParser(description="Telegram Contacts Updater")

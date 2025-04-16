@@ -49,7 +49,8 @@ DEFAULT_PATHS = {
     "raw_json_dir": "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__People_nxtcld/telegram",
     "markdown_base_dir": "/Users/user/____Sandruk/___PKM/__Vaults_Databases/__People__vault",
     "archive_dir_name": ".tg-archives",
-    "json2md_script": "/Users/user/__Repositories/LLMs-AssistantTelegram-ChatRag__SecondBrainInc/scripts/tgJson2Markdown/tgJson2Markdown.py"
+    "json2md_script": "/Users/user/__Repositories/LLMs-AssistantTelegram-ChatRag__SecondBrainInc/scripts/tgJson2Markdown/tgJson2Markdown.py",
+    "today_yesterday_dir": "/Users/user/____Sandruk/___PKM"
 }
 
 # Time modifier mapping
@@ -858,6 +859,259 @@ def extract_namespace_from_csv_path(csv_path: str) -> Optional[str]:
         logger.debug(f"Using 'error' as namespace due to exception: {str(e)}")
         return "error"  # Use an error namespace instead of None
 
+def generate_today_yesterday_files() -> bool:
+    """
+    Generate Telegram-Today.md and Telegram-Yesterday.md files based on the DayLastContacted field.
+    
+    Returns:
+        True if successful, False otherwise
+    """
+    try:
+        contacts_dir = DEFAULT_PATHS["contacts_dir"]
+        output_dir = DEFAULT_PATHS["today_yesterday_dir"]
+        
+        # Find all contact CSV files
+        csv_files = find_contacts_csv_files(contacts_dir)
+        if not csv_files:
+            logger.warning(f"No contact CSV files found in {contacts_dir}")
+            return False
+        
+        today = datetime.now().strftime('%Y-%m-%d')
+        yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        
+        today_contacts = []
+        yesterday_contacts = []
+        
+        # Process each CSV file to find contacts with today's and yesterday's date
+        for csv_file in csv_files:
+            try:
+                # Extract namespace from the CSV filename
+                namespace = extract_namespace_from_csv_path(csv_file)
+                
+                # Read the CSV file
+                with open(csv_file, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    fieldnames = reader.fieldnames
+                    
+                    # Skip if no headers found
+                    if not fieldnames:
+                        logger.warning(f"CSV file {csv_file} has no headers")
+                        continue
+                    
+                    # Check if the CSV has the DayLastContacted field
+                    if 'DayLastContacted' not in fieldnames:
+                        logger.warning(f"CSV file {csv_file} does not have DayLastContacted field")
+                        continue
+                    
+                    # Determine which fields to use for identifying contacts
+                    id_field = None
+                    for field in ['ID', 'user_id', 'id', 'tg_id']:
+                        if field in fieldnames:
+                            id_field = field
+                            break
+                            
+                    if not id_field:
+                        logger.warning(f"CSV file {csv_file} does not have a recognizable ID field")
+                        continue
+                    
+                    # Process each row
+                    for row in reader:
+                        # Skip rows without the necessary fields
+                        if not row.get(id_field) or not row.get('DayLastContacted'):
+                            continue
+                        
+                        # Get contact details
+                        contact_id = row.get(id_field)
+                        contact_date = row.get('DayLastContacted')
+                        
+                        # Determine if this is a user, group, or channel
+                        contact_type = "Private Chat"  # Default
+                        if 'Type' in fieldnames and row.get('Type'):
+                            type_value = row.get('Type').lower()
+                            if 'group' in type_value:
+                                contact_type = "Group"
+                                # Add member count if available
+                                if 'MemberCount' in fieldnames and row.get('MemberCount'):
+                                    contact_type += f" ({row.get('MemberCount')} members)"
+                            elif 'channel' in type_value:
+                                contact_type = "Channel"
+                        
+                        # Get display name
+                        display_name = None
+                        # Try to get username first
+                        if 'Username' in fieldnames and row.get('Username'):
+                            username = row.get('Username')
+                            display_name = f"@{username}"
+                        # If no username, try first name + last name
+                        elif 'FirstName' in fieldnames and row.get('FirstName'):
+                            display_name = row.get('FirstName')
+                            if 'LastName' in fieldnames and row.get('LastName'):
+                                display_name += f" {row.get('LastName')}"
+                        # Fall back to title for groups
+                        elif 'Title' in fieldnames and row.get('Title'):
+                            display_name = row.get('Title')
+                        # Last resort: use the ID
+                        else:
+                            display_name = f"Contact {contact_id}"
+                        
+                        # Find the markdown file for this contact
+                        namespace_dir = os.path.join(DEFAULT_PATHS["markdown_base_dir"], namespace)
+                        if not os.path.exists(namespace_dir):
+                            logger.debug(f"Namespace directory does not exist: {namespace_dir}")
+                            markdown_path = None
+                        else:
+                            markdown_path = None
+                            
+                            # Try different patterns to find the markdown file
+                            patterns_to_try = []
+                            
+                            # 1. Try with username if available
+                            if display_name.startswith('@'):
+                                username = display_name[1:]
+                                patterns_to_try.append(f"@._*@{username}*tg_id*{contact_id}*.md")
+                                patterns_to_try.append(f"@.__@{username}*tg_id*{contact_id}*.md")
+                            
+                            # 2. Try with user ID
+                            patterns_to_try.append(f"@._*tg_id*{contact_id}*.md")
+                            patterns_to_try.append(f"@.__*tg_id*{contact_id}*.md")
+                            
+                            # 3. Try based on contact type
+                            if contact_type.startswith("Group"):
+                                patterns_to_try.append(f"@._*group*{contact_id}*.md")
+                                patterns_to_try.append(f"@.__*group*{contact_id}*.md")
+                            elif contact_type == "Channel":
+                                patterns_to_try.append(f"@._*channel*{contact_id}*.md")
+                                patterns_to_try.append(f"@.__*channel*{contact_id}*.md")
+                            
+                            # Try each pattern
+                            for pattern in patterns_to_try:
+                                logger.debug(f"Trying to find markdown file with pattern: {os.path.join(namespace_dir, pattern)}")
+                                matching_files = glob.glob(os.path.join(namespace_dir, pattern))
+                                if matching_files:
+                                    # Sort by modification time, newest first
+                                    matching_files.sort(key=os.path.getmtime, reverse=True)
+                                    markdown_path = matching_files[0]
+                                    logger.debug(f"Found markdown file: {markdown_path}")
+                                    break
+                            
+                            # If no match with globbing, try listing all files and finding closest match
+                            if not markdown_path:
+                                try:
+                                    all_files = os.listdir(namespace_dir)
+                                    logger.debug(f"Looking for ID {contact_id} in {len(all_files)} files in {namespace_dir}")
+                                    
+                                    for file in all_files:
+                                        if f"tg_id-{contact_id}" in file or f"group_id-{contact_id}" in file:
+                                            markdown_path = os.path.join(namespace_dir, file)
+                                            logger.debug(f"Found markdown file by direct ID match: {markdown_path}")
+                                            break
+                                except Exception as e:
+                                    logger.debug(f"Error listing files in {namespace_dir}: {e}")
+                        
+                        # Create the contact entry
+                        contact_entry = {
+                            'id': contact_id,
+                            'display_name': display_name,
+                            'type': contact_type,
+                            'markdown_path': markdown_path,
+                            'namespace': namespace
+                        }
+                        
+                        # Add to the appropriate list
+                        if contact_date == today:
+                            today_contacts.append(contact_entry)
+                        elif contact_date == yesterday:
+                            yesterday_contacts.append(contact_entry)
+                
+            except Exception as e:
+                logger.error(f"Error processing CSV file {csv_file}: {e}")
+                import traceback
+                logger.debug(traceback.format_exc())
+        
+        # Generate the Today markdown file
+        today_markdown_path = os.path.join(output_dir, "Telegram-Today.md")
+        with open(today_markdown_path, 'w', encoding='utf-8') as f:
+            f.write(f"# Telegram Today ({today})\n\n")
+            f.write("## Recently Active Chats\n\n")
+            
+            if not today_contacts:
+                f.write("*No active chats today.*\n")
+            else:
+                # Sort contacts by display name
+                today_contacts.sort(key=lambda x: x['display_name'])
+                
+                # Determine vault name from base path
+                vault_name = os.path.basename(DEFAULT_PATHS["markdown_base_dir"])
+                if not vault_name:
+                    vault_name = "__People__vault"  # Default vault name
+                
+                # Write each contact
+                for i, contact in enumerate(today_contacts, 1):
+                    if contact['markdown_path']:
+                        # Create an Obsidian link to the markdown file
+                        try:
+                            md_rel_path = os.path.relpath(
+                                contact['markdown_path'], 
+                                DEFAULT_PATHS["markdown_base_dir"]
+                            )
+                            obsidian_link = f"obsidian://open?vault={vault_name}&file={md_rel_path}"
+                            f.write(f"{i}. [{contact['display_name']}]({obsidian_link}) - {contact['type']}\n")
+                        except Exception as e:
+                            logger.debug(f"Error creating link for {contact['display_name']}: {e}")
+                            f.write(f"{i}. {contact['display_name']} - {contact['type']} (File: {os.path.basename(contact['markdown_path'])})\n")
+                    else:
+                        # Just list the contact without a link
+                        f.write(f"{i}. {contact['display_name']} - {contact['type']}\n")
+        
+        # Generate the Yesterday markdown file
+        yesterday_markdown_path = os.path.join(output_dir, "Telegram-Yesterday.md")
+        with open(yesterday_markdown_path, 'w', encoding='utf-8') as f:
+            f.write(f"# Telegram Yesterday ({yesterday})\n\n")
+            f.write("## Recently Active Chats\n\n")
+            
+            if not yesterday_contacts:
+                f.write("*No active chats yesterday.*\n")
+            else:
+                # Sort contacts by display name
+                yesterday_contacts.sort(key=lambda x: x['display_name'])
+                
+                # Determine vault name from base path
+                vault_name = os.path.basename(DEFAULT_PATHS["markdown_base_dir"])
+                if not vault_name:
+                    vault_name = "__People__vault"  # Default vault name
+                
+                # Write each contact
+                for i, contact in enumerate(yesterday_contacts, 1):
+                    if contact['markdown_path']:
+                        # Create an Obsidian link to the markdown file
+                        try:
+                            md_rel_path = os.path.relpath(
+                                contact['markdown_path'], 
+                                DEFAULT_PATHS["markdown_base_dir"]
+                            )
+                            obsidian_link = f"obsidian://open?vault={vault_name}&file={md_rel_path}"
+                            f.write(f"{i}. [{contact['display_name']}]({obsidian_link}) - {contact['type']}\n")
+                        except Exception as e:
+                            logger.debug(f"Error creating link for {contact['display_name']}: {e}")
+                            f.write(f"{i}. {contact['display_name']} - {contact['type']} (File: {os.path.basename(contact['markdown_path'])})\n")
+                    else:
+                        # Just list the contact without a link
+                        f.write(f"{i}. {contact['display_name']} - {contact['type']}\n")
+        
+        # Count how many contacts have links
+        today_with_links = sum(1 for c in today_contacts if c['markdown_path'])
+        yesterday_with_links = sum(1 for c in yesterday_contacts if c['markdown_path'])
+        
+        logger.info(f"Generated Today/Yesterday markdown files: {today_markdown_path}, {yesterday_markdown_path}")
+        logger.info(f"Today: {len(today_contacts)} contacts ({today_with_links} with links), Yesterday: {len(yesterday_contacts)} contacts ({yesterday_with_links} with links)")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Error generating Today/Yesterday markdown files: {e}")
+        import traceback
+        logger.debug(traceback.format_exc())
+        return False
+
 def process_messages_for_contact(contact: Contact, time_spec: str) -> bool:
     """
     Process messages for a specific contact.
@@ -870,6 +1124,7 @@ def process_messages_for_contact(contact: Contact, time_spec: str) -> bool:
         True if successful, False otherwise
     """
     try:
+        # Use the default paths
         paths = DEFAULT_PATHS
         
         # Parse time modifier
@@ -931,6 +1186,15 @@ def process_messages_for_contact(contact: Contact, time_spec: str) -> bool:
         if not convert_json_to_markdown(paths["json2md_script"], json_file, markdown_file, time_spec, contact):
             logger.error("Failed to convert JSON to markdown")
             return False
+        
+        # Update DayLastContacted field in CSV files
+        contacts_dir = paths.get("contacts_dir", "/Users/user/____Sandruk/___PKM/__Vaults_Databases/__People__vault/DatabaseContacts")
+        if not update_day_last_contacted(contacts_dir, contact):
+            logger.warning(f"Failed to update DayLastContacted for contact: {contact}")
+            # Continue execution even if update fails - this is not critical
+        
+        # After updating DayLastContacted, regenerate Today/Yesterday files
+        generate_today_yesterday_files()
         
         logger.info(f"Successfully processed messages for contact: {contact}")
         return True
@@ -1214,12 +1478,96 @@ def process_command(command: str) -> None:
     logger.info(f"Processing messages for contact: {contact}")
     process_messages_for_contact(contact, time_spec)
 
+def update_day_last_contacted(contacts_dir: str, contact: Contact) -> bool:
+    """
+    Update the DayLastContacted field for a contact in all relevant CSV files.
+    
+    Args:
+        contacts_dir: Directory containing contacts CSV files
+        contact: Contact object to update
+        
+    Returns:
+        True if update was successful, False otherwise
+    """
+    today = datetime.now().strftime('%Y-%m-%d')
+    logger.info(f"Updating DayLastContacted to {today} for contact: {contact}")
+    
+    # Find all contact CSV files
+    csv_files = find_contacts_csv_files(contacts_dir)
+    if not csv_files:
+        logger.warning(f"No contact CSV files found in {contacts_dir}")
+        return False
+    
+    updated = False
+    
+    for csv_file in csv_files:
+        try:
+            # Read the entire CSV file
+            rows = []
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                fieldnames = reader.fieldnames
+                
+                # Skip if no headers found
+                if not fieldnames:
+                    logger.warning(f"CSV file {csv_file} has no headers")
+                    continue
+                
+                # Check if the CSV has the DayLastContacted field
+                if 'DayLastContacted' not in fieldnames:
+                    logger.warning(f"CSV file {csv_file} does not have DayLastContacted field")
+                    continue
+                
+                # Determine which field to use for user ID matching
+                id_field = None
+                for field in ['ID', 'user_id', 'id', 'tg_id']:
+                    if field in fieldnames:
+                        id_field = field
+                        break
+                        
+                if not id_field:
+                    logger.warning(f"CSV file {csv_file} does not have a recognizable ID field")
+                    continue
+                
+                # Process each row
+                for row in reader:
+                    # Check if this is the row for our contact
+                    if row.get(id_field) == contact.user_id:
+                        row['DayLastContacted'] = today
+                        updated = True
+                        logger.debug(f"Updated DayLastContacted for contact {contact.user_id} in {csv_file}")
+                    rows.append(row)
+            
+            # Write the updated content back to the file
+            if updated:
+                with open(csv_file, 'w', encoding='utf-8', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(rows)
+                logger.info(f"Updated CSV file: {csv_file}")
+        
+        except Exception as e:
+            logger.error(f"Error updating DayLastContacted in {csv_file}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+    
+    return updated
+
 def main():
     """
     Main function.
     """
     parser = argparse.ArgumentParser(description='Process Telegram messages for a contact')
-    parser.add_argument('identifier', help='Username, alias, or chat ID')
+    
+    # Add --today-yesterday-only flag first so we can check it
+    parser.add_argument('--today-yesterday-only', action='store_true', help='Only generate Today/Yesterday files without processing messages')
+    
+    # Only require identifier if not using --today-yesterday-only
+    if '--today-yesterday-only' in sys.argv:
+        parser.add_argument('identifier', nargs='?', help='Username, alias, or chat ID')
+    else:
+        parser.add_argument('identifier', help='Username, alias, or chat ID')
+    
     parser.add_argument('time_spec', nargs='?', default='7d', help='Time specification (default: 7d)')
     parser.add_argument('--contacts-dir', help='Directory containing contact CSV files')
     parser.add_argument('--markdown-dir', help='Base directory for markdown output')
@@ -1228,6 +1576,7 @@ def main():
     parser.add_argument('--json2md-script', help='Path to JSON to markdown conversion script')
     parser.add_argument('--verbose', '-v', action='store_true', help='Enable verbose output')
     parser.add_argument('--debug', '-d', action='store_true', help='Enable debug output')
+    parser.add_argument('--today-yesterday-dir', help='Directory to store Today/Yesterday files')
     
     args = parser.parse_args()
     
@@ -1249,6 +1598,18 @@ def main():
         custom_paths["tdl_path"] = args.tdl_path
     if args.json2md_script:
         custom_paths["json2md_script"] = args.json2md_script
+    if args.today_yesterday_dir:
+        custom_paths["today_yesterday_dir"] = args.today_yesterday_dir
+    
+    # Override DEFAULT_PATHS
+    for key, value in custom_paths.items():
+        DEFAULT_PATHS[key] = value
+    
+    # If only generating Today/Yesterday files, do that and exit
+    if args.today_yesterday_only:
+        logger.info("Generating Today/Yesterday files only")
+        generate_today_yesterday_files()
+        return 0
     
     # Process command with custom paths
     command = f"tg2p {args.identifier} {args.time_spec}"
