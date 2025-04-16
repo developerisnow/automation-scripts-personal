@@ -468,10 +468,18 @@ def generate_output_filenames(markdown_base_dir: str, raw_json_dir: str, contact
         Tuple of (json_path, markdown_path)
     """
     # Format basic identifier for the contact
-    if contact.username:
-        identifier = f"@{contact.username}"
+    if contact.is_group:
+        # For groups, use a special prefix
+        if contact.username:
+            identifier = f"@{contact.username}"
+        else:
+            identifier = f"group_{contact.user_id}"
     else:
-        identifier = f"user_{contact.user_id}"
+        # For users
+        if contact.username:
+            identifier = f"@{contact.username}"
+        else:
+            identifier = f"user_{contact.user_id}"
     
     # Combined name for display
     combined_name = ""
@@ -483,7 +491,11 @@ def generate_output_filenames(markdown_base_dir: str, raw_json_dir: str, contact
         combined_name += contact.last_name
     
     # Format file part
-    file_part = f"{identifier}-tg_id-{contact.user_id}"
+    if contact.is_group:
+        file_part = f"{identifier}-group_id-{contact.user_id}"
+    else:
+        file_part = f"{identifier}-tg_id-{contact.user_id}"
+        
     if combined_name:
         file_part += f"-{combined_name}"
     
@@ -516,25 +528,51 @@ def archive_old_markdown_files(namespace_dir: str, file_part: str, archive_dir_n
     archive_dir = os.path.join(namespace_dir, archive_dir_name)
     os.makedirs(archive_dir, exist_ok=True)
     
-    # Find existing files
-    pattern = os.path.join(namespace_dir, f"@.__{file_part}-*.md")
-    existing_files = glob.glob(pattern)
-    
-    if existing_files:
-        logger.info(f"Found {len(existing_files)} existing markdown files to archive")
+    # Get the base identifier by removing time spec and preserving ID parts
+    # Handle both user IDs and group IDs
+    match = re.search(r'(@\._\_.*(?:tg_id|group_id)-\d+)', file_part)
+    if match:
+        base_pattern = match.group(1)
+        # Find existing files
+        pattern = os.path.join(namespace_dir, f"{base_pattern}-*.md")
+        existing_files = glob.glob(pattern)
         
-        for file in existing_files:
-            # Skip archive directory files
-            if archive_dir_name in file:
-                continue
-                
-            # Move to archive
-            dest = os.path.join(archive_dir, os.path.basename(file))
-            logger.info(f"Archiving {file} to {dest}")
-            try:
-                shutil.move(file, dest)
-            except Exception as e:
-                logger.warning(f"Failed to archive file {file}: {e}")
+        if existing_files:
+            logger.info(f"Found {len(existing_files)} existing markdown files to archive")
+            
+            for file in existing_files:
+                # Skip archive directory files
+                if archive_dir_name in file:
+                    continue
+                    
+                # Move to archive
+                dest = os.path.join(archive_dir, os.path.basename(file))
+                logger.info(f"Archiving {file} to {dest}")
+                try:
+                    shutil.move(file, dest)
+                except Exception as e:
+                    logger.warning(f"Failed to archive file {file}: {e}")
+    else:
+        logger.warning(f"Could not extract base pattern from file_part: {file_part}")
+        # Fallback to the original pattern for backward compatibility
+        pattern = os.path.join(namespace_dir, f"@.__{file_part}-*.md")
+        existing_files = glob.glob(pattern)
+        
+        if existing_files:
+            logger.info(f"Found {len(existing_files)} existing markdown files to archive")
+            
+            for file in existing_files:
+                # Skip archive directory files
+                if archive_dir_name in file:
+                    continue
+                    
+                # Move to archive
+                dest = os.path.join(archive_dir, os.path.basename(file))
+                logger.info(f"Archiving {file} to {dest}")
+                try:
+                    shutil.move(file, dest)
+                except Exception as e:
+                    logger.warning(f"Failed to archive file {file}: {e}")
 
 def determine_date_range_from_time_spec(time_spec: str) -> Tuple[str, str]:
     """
@@ -636,16 +674,6 @@ def convert_json_to_markdown(script_path: str, json_file: str, markdown_file: st
             # If it's just a message count (like "100"), add max messages filter
             base_command.extend(['--maxMessages', str(value)])
         
-        # Add display name information if available
-        if contact.first_name:
-            name_override = contact.first_name
-            if contact.last_name:
-                name_override += " " + contact.last_name
-            base_command.extend(['--firstNameOverride', name_override])
-            
-        if contact.username:
-            base_command.extend(['--usernameOverride', contact.username])
-            
         # Log the command
         logger.info(f"Running tgJson2Markdown.py command: {' '.join(base_command)}")
         
@@ -884,10 +912,18 @@ def process_messages_for_contact(contact: Contact, time_spec: str) -> bool:
         
         # Archive old markdown files
         namespace_dir = os.path.join(paths["markdown_base_dir"], contact.namespace)
-        if contact.username:
-            file_part = f"@{contact.username}-tg_id-{contact.user_id}"
+        
+        # Create proper file_part based on contact type
+        if contact.is_group:
+            if contact.username:
+                file_part = f"@{contact.username}-group_id-{contact.user_id}"
+            else:
+                file_part = f"group_{contact.user_id}-group_id-{contact.user_id}"
         else:
-            file_part = f"user_{contact.user_id}-tg_id-{contact.user_id}"
+            if contact.username:
+                file_part = f"@{contact.username}-tg_id-{contact.user_id}"
+            else:
+                file_part = f"user_{contact.user_id}-tg_id-{contact.user_id}"
         
         archive_old_markdown_files(namespace_dir, file_part, paths["archive_dir_name"])
         

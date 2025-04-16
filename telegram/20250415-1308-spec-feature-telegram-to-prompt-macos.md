@@ -152,3 +152,18 @@ options:
 - `h` - часы (например, 12h = 12 часов)
 - без суффикса - количество сообщений (например, 100 = последние 100 сообщений)
 - `all` - все сообщения
+
+# Updates and Fixes
+
+## 2025-04-15: Added Support for Groups and Channels
+- [x] Fixed file naming convention for groups and channels:
+  - Groups now use `group_id` instead of `tg_id` in filenames
+  - For groups without usernames, the pattern is now `group_{chat_id}` instead of `user_{chat_id}`
+- [x] Fixed conversion to markdown:
+  - Removed unsupported parameters (`--usernameOverride`, `--firstNameOverride`) that were causing errors
+  - Simplified command execution to work with all chat types
+- [x] Improved archive function to handle both user and group filename patterns
+- [x] These changes allow the script to work with:
+  - Direct messages (one-on-one chats)
+  - Group chats
+  - Channels
