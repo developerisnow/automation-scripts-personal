@@ -12,6 +12,7 @@ fi
 
 # Сохраняем текущую директорию
 CURRENT_DIR=$(pwd)
+STATIC_DIR="/Users/user/____Sandruk/___PKM/temp"
 echo "Текущая директория: $CURRENT_DIR"
 
 COMMAND=$1
@@ -41,7 +42,7 @@ if [ "$COMMAND" = "treecode2prompt" ]; then
     fi
 
     # Create both output directories
-    OUTPUT_DIR="$CURRENT_DIR/.references/o1-pro/"
+    OUTPUT_DIR="$STATIC_DIR/code2prompt/"
     DOCS_DIR="$CURRENT_DIR/docs/meta/repo-maps/"
     mkdir -p "$OUTPUT_DIR" "$DOCS_DIR"
 
@@ -62,7 +63,7 @@ if [ "$COMMAND" = "treecode2prompt" ]; then
     FOLDER_SIZE=$(du -sh "$INPUT_FOLDER" | cut -f1)
     TREE_CONTENT+="\n### Repository Size\n\`\`\`\n$FOLDER_SIZE\n\`\`\`\n"
 
-    # Save to .references output
+    # Save to references output
     echo "=== File Tree ===" > "$OUTPUT_FILE"
     cd "$CURRENT_DIR" && find "$INPUT_FOLDER" -type f -not -path "*/\.*" | sort | tree --fromfile >> "$OUTPUT_FILE"
     
@@ -106,7 +107,7 @@ elif [ "$COMMAND" = "bcode2prompt" ]; then
         fi
     fi
 
-    OUTPUT_DIR="$CURRENT_DIR/.references/o1-pro/"
+    OUTPUT_DIR="$STATIC_DIR/code2prompt/"
     mkdir -p "$OUTPUT_DIR"
 
     TIMESTAMP=$(date '+%Y-%m-%d_%H-%M')
@@ -174,11 +175,11 @@ else
         FOLDER_NAME=$(basename "$INPUT_FOLDER")
     fi
 
-    OUTPUT_DIR="$CURRENT_DIR/.references/o1-pro/"
+    OUTPUT_DIR="$STATIC_DIR/code2prompt/"
     mkdir -p "$OUTPUT_DIR"
 
     TIMESTAMP=$(date '+%Y-%m-%d_%H-%M')
-    OUTPUT_FILE="${OUTPUT_DIR}prompt_${FOLDER_NAME}_${TIMESTAMP}.txt"
+    OUTPUT_FILE="${OUTPUT_DIR}c2p_${FOLDER_NAME}_${TIMESTAMP}.txt"
 
     cd "$CURRENT_DIR" && code2prompt "$INPUT_FOLDER" --tokens --output "$OUTPUT_FILE"
 

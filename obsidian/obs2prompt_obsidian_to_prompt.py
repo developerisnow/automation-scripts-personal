@@ -272,27 +272,62 @@ class ObsidianLinkCollector:
         # If the file already exists, return it
         if os.path.exists(os.path.join(self.vault_path, filename)):
             return os.path.join(self.vault_path, filename)
-            
+
         # If the path includes .md extension, try with and without it
         base_name = filename
         if filename.endswith('.md'):
             base_name = filename[:-3]
-        
+
         # Create a list of possible file variants
         self.try_variants = [base_name, f"{base_name}.md", f"{base_name}🌳.md", 
                       f"${base_name}.md", f"@{base_name}.md", f"={base_name}.md",
                       f"$.{base_name}.md", f"$ {base_name}.md", f"$. {base_name}.md"]
         
+        # Common directories to check early
+        common_dirs = ["_Outputs_External", "_Outputs_AI", "Dailies_Outputs", "voice-notes", "_official-iteractions-steps", "notes"]
+
         self._debug(f"Trying variants: {self.try_variants}")
-        
+
+        # Check variants in the root directory first
         for variant in self.try_variants:
             full_path = os.path.join(self.vault_path, variant)
             if os.path.exists(full_path):
                 self._debug(f"Found in root directory: {full_path}")
                 return full_path
-        
-        # Perform recursive search through subdirectories if not found
-        self._debug(f"File not found in root. Searching subdirectories for: {filename}")
+                
+        # Check variants in common subdirectories
+        self._debug(f"Checking common subdirectories: {common_dirs}")
+        for common_dir in common_dirs:
+            for variant in self.try_variants:
+                 # Check relative to vault root
+                dir_path_relative = os.path.join(self.vault_path, common_dir)
+                full_path_relative = os.path.join(dir_path_relative, variant)
+                if os.path.exists(full_path_relative):
+                    self._debug(f"Found in common directory (relative): {full_path_relative}")
+                    return full_path_relative
+
+                # Check relative to __SecondBrain (common pattern observed)
+                second_brain_path = os.path.join(self.vault_path, "__SecondBrain")
+                dir_path_sb = os.path.join(second_brain_path, common_dir)
+                full_path_sb = os.path.join(dir_path_sb, variant)
+                if os.path.exists(full_path_sb):
+                     self._debug(f"Found in common directory (__SecondBrain): {full_path_sb}")
+                     return full_path_sb
+                     
+                # Check within Projects_PKM (another common pattern)
+                projects_pkm_path = os.path.join(second_brain_path, "Projects_PKM")
+                for project_dir in os.listdir(projects_pkm_path): # Check inside each project
+                    project_full_path = os.path.join(projects_pkm_path, project_dir)
+                    if os.path.isdir(project_full_path):
+                       dir_path_proj = os.path.join(project_full_path, common_dir)
+                       full_path_proj = os.path.join(dir_path_proj, variant)
+                       if os.path.exists(full_path_proj):
+                           self._debug(f"Found in common directory (Projects_PKM/{project_dir}): {full_path_proj}")
+                           return full_path_proj
+
+
+        # Perform recursive search through subdirectories if not found yet
+        self._debug(f"File not found in root or common dirs. Searching all subdirectories for: {filename}")
         
         # Try a more flexible search looking for the filename in subdirectories
         for root, dirs, files in self._custom_walk(self.vault_path):
@@ -447,7 +482,7 @@ def main():
             temp_dir = os.path.join(vault_path, 'temp')
             os.makedirs(temp_dir, exist_ok=True)
             base_name = os.path.basename(args.input_file).replace('.md', '')
-            output_path = os.path.join(temp_dir, f"aggregate_{base_name}.txt")
+            output_path = os.path.join(temp_dir, f"o2p_aggregate_{base_name}.txt")
         
         # Write to file
         with open(output_path, 'w', encoding='utf-8') as f:

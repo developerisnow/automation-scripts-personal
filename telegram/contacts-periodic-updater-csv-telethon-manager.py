@@ -347,7 +347,7 @@ def run_telegram_for_session(session_name):
             
             # The expected headers for our updated format
             expected_headers = [
-                'tg_session', 'ID', 'Username', 'Alias', 'Title', 'Type', 'Usernames', 'First Name', 
+                'tg_session', 'ID', 'Username', 'DayLastContacted', 'Title', 'Type', 'Usernames', 'First Name', 
                 'Last Name', 'Phone', 'Contact', 'Premium', 'Lang Code', 
                 'Mutual Contact', 'Is Self', 'Deleted', 'Bot', 'Bot Chat History', 
                 'Bot No Chats', 'Verified', 'Restricted', 'Min', 'Bot Inline Geo', 
@@ -355,7 +355,7 @@ def run_telegram_for_session(session_name):
                 'Attach Menu Enabled', 'Access Hash', 'Status Original', 'Status Date', 
                 'Status Time', 'Status Datetime', 'Bot Info Version', 
                 'Restriction Reason', 'Bot Inline Placeholder', 'Emoji Status',
-                'Megagroup', 'Gigagroup', 'Participants Count', 'DayLastContacted'
+                'Megagroup', 'Gigagroup', 'Participants Count'
             ]
             
             # Check if the headers match the expected format

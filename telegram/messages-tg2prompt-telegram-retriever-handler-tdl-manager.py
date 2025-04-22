@@ -859,6 +859,326 @@ def extract_namespace_from_csv_path(csv_path: str) -> Optional[str]:
         logger.debug(f"Using 'error' as namespace due to exception: {str(e)}")
         return "error"  # Use an error namespace instead of None
 
+def load_chat_orders(contacts_dir: str) -> Dict[str, Dict[str, int]]:
+    """
+    Load the previous chat orders from JSON file.
+    
+    Args:
+        contacts_dir: Directory containing the chat orders JSON file
+        
+    Returns:
+        Dictionary mapping namespace to dict of chat_id -> position
+    """
+    chat_orders_file = os.path.join(contacts_dir, "telegram-chat-orders.json")
+    
+    # Initialize with empty dict
+    chat_orders = {}
+    
+    if os.path.exists(chat_orders_file):
+        try:
+            with open(chat_orders_file, 'r', encoding='utf-8') as f:
+                chat_orders = json.load(f)
+            logger.info(f"Loaded chat orders for {len(chat_orders)} namespaces from {chat_orders_file}")
+        except Exception as e:
+            logger.error(f"Error loading chat orders from {chat_orders_file}: {e}")
+            # Create a new one if there was an error
+            chat_orders = {}
+    else:
+        logger.info(f"Chat orders file not found: {chat_orders_file}, starting with empty orders")
+    
+    return chat_orders
+
+def save_chat_orders(contacts_dir: str, chat_orders: Dict[str, Dict[str, int]]) -> bool:
+    """
+    Save the current chat orders to JSON file.
+    
+    Args:
+        contacts_dir: Directory to save the chat orders JSON file
+        chat_orders: Dictionary mapping namespace to dict of chat_id -> position
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    chat_orders_file = os.path.join(contacts_dir, "telegram-chat-orders.json")
+    
+    try:
+        # First create a temporary file
+        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json', encoding='utf-8') as f:
+            json.dump(chat_orders, f, indent=2)
+            temp_filename = f.name
+        
+        # Now move the temp file to the actual destination
+        shutil.move(temp_filename, chat_orders_file)
+        logger.info(f"Saved chat orders for {len(chat_orders)} namespaces to {chat_orders_file}")
+        return True
+    except Exception as e:
+        logger.error(f"Error saving chat orders to {chat_orders_file}: {e}")
+        return False
+
+def initialize_chat_orders(contacts_dir: str) -> bool:
+    """
+    Initialize the chat orders file by scanning all CSV files.
+    
+    This function reads the current order of chats from all CSV files and
+    creates an initial chat orders file. It also sets any chats without
+    a DayLastContacted field to yesterday's date.
+    
+    Args:
+        contacts_dir: Directory containing contacts CSV files
+        
+    Returns:
+        True if successful, False otherwise
+    """
+    logger.info(f"Initializing chat orders from contacts in {contacts_dir}")
+    
+    # Find all contact CSV files
+    csv_files = find_contacts_csv_files(contacts_dir)
+    if not csv_files:
+        logger.warning(f"No contact CSV files found in {contacts_dir}")
+        return False
+    
+    # Yesterday's date for new contacts
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    
+    # Track new chat positions for saving
+    new_chat_orders = {}
+    
+    # Track if we updated any files
+    updated_files = False
+    
+    for csv_file in csv_files:
+        try:
+            # Extract namespace
+            namespace = extract_namespace_from_csv_path(csv_file)
+            
+            # Read the CSV file
+            rows = []
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                fieldnames = reader.fieldnames
+                
+                # Skip if no headers found
+                if not fieldnames:
+                    logger.warning(f"CSV file {csv_file} has no headers")
+                    continue
+                
+                # Check if the CSV has the DayLastContacted field
+                has_day_last_contacted = 'DayLastContacted' in fieldnames
+                
+                # Determine which field to use for user ID matching
+                id_field = None
+                for field in ['ID', 'user_id', 'id', 'tg_id']:
+                    if field in fieldnames:
+                        id_field = field
+                        break
+                        
+                if not id_field:
+                    logger.warning(f"CSV file {csv_file} does not have a recognizable ID field")
+                    continue
+                
+                # Prepare new orders for this namespace
+                namespace_orders = {}
+                
+                # Track whether we need to add the DayLastContacted field
+                need_to_add_field = False
+                if not has_day_last_contacted:
+                    need_to_add_field = True
+                    fieldnames = list(fieldnames) + ["DayLastContacted"]
+                    logger.info(f"Adding DayLastContacted field to {csv_file}")
+                
+                # Process each row and collect orders
+                all_rows = []
+                for idx, row in enumerate(reader):
+                    # Update position in new orders
+                    chat_id = row.get(id_field)
+                    if chat_id:
+                        namespace_orders[chat_id] = idx
+                    
+                    # Set DayLastContacted for new entries
+                    if need_to_add_field or not row.get('DayLastContacted'):
+                        row['DayLastContacted'] = yesterday
+                        updated_files = True
+                    
+                    all_rows.append(row)
+                
+                # Add the new orders to the global dict
+                new_chat_orders[namespace] = namespace_orders
+                
+                # Only write back if we added or updated the DayLastContacted field
+                if updated_files:
+                    with open(csv_file, 'w', encoding='utf-8', newline='') as f:
+                        writer = csv.DictWriter(f, fieldnames=fieldnames)
+                        writer.writeheader()
+                        writer.writerows(all_rows)
+                    logger.info(f"Updated CSV file with DayLastContacted field: {csv_file}")
+            
+        except Exception as e:
+            logger.error(f"Error initializing chat orders for {csv_file}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+    
+    # Save the new chat orders
+    success = save_chat_orders(contacts_dir, new_chat_orders)
+    
+    if success:
+        logger.info(f"Successfully initialized chat orders for {len(new_chat_orders)} namespaces")
+        return True
+    else:
+        logger.error("Failed to save chat orders")
+        return False
+
+def update_day_last_contacted(contacts_dir: str, contact: Contact) -> bool:
+    """
+    Update the DayLastContacted field for a contact in all relevant CSV files.
+    
+    This function implements the improved algorithm for determining when to update
+    the DayLastContacted field based on changes in chat position.
+    
+    Args:
+        contacts_dir: Directory containing contacts CSV files
+        contact: Contact object to update
+        
+    Returns:
+        True if update was successful, False otherwise
+    """
+    # Maximum number of chats that can be updated to today's date in one run
+    MAX_TODAY_CHATS = 100
+    
+    today = datetime.now().strftime('%Y-%m-%d')
+    yesterday = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+    logger.info(f"Updating DayLastContacted for contact: {contact}")
+    
+    # Find all contact CSV files
+    csv_files = find_contacts_csv_files(contacts_dir)
+    if not csv_files:
+        logger.warning(f"No contact CSV files found in {contacts_dir}")
+        return False
+    
+    # Load previous chat orders
+    chat_orders = load_chat_orders(contacts_dir)
+    
+    # Track if we updated any files
+    updated = False
+    
+    # Track new chat positions for saving later
+    new_chat_orders = {}
+    
+    for csv_file in csv_files:
+        try:
+            # Extract namespace
+            namespace = extract_namespace_from_csv_path(csv_file)
+            
+            # Get previous chat orders for this namespace
+            previous_orders = chat_orders.get(namespace, {})
+            
+            # Read the entire CSV file
+            rows = []
+            with open(csv_file, 'r', encoding='utf-8') as f:
+                reader = csv.DictReader(f)
+                fieldnames = reader.fieldnames
+                
+                # Skip if no headers found
+                if not fieldnames:
+                    logger.warning(f"CSV file {csv_file} has no headers")
+                    continue
+                
+                # Check if the CSV has the DayLastContacted field
+                if 'DayLastContacted' not in fieldnames:
+                    logger.warning(f"CSV file {csv_file} does not have DayLastContacted field")
+                    continue
+                
+                # Determine which field to use for user ID matching
+                id_field = None
+                for field in ['ID', 'user_id', 'id', 'tg_id']:
+                    if field in fieldnames:
+                        id_field = field
+                        break
+                        
+                if not id_field:
+                    logger.warning(f"CSV file {csv_file} does not have a recognizable ID field")
+                    continue
+                
+                # Prepare new orders for this namespace
+                namespace_orders = {}
+                
+                # Count how many chats already have today's date
+                today_count = 0
+                
+                # First pass: count today's contacts and collect all rows
+                all_rows = []
+                for idx, row in enumerate(reader):
+                    all_rows.append(row)
+                    
+                    # Update position in new orders
+                    chat_id = row.get(id_field)
+                    if chat_id:
+                        namespace_orders[chat_id] = idx
+                    
+                    # Count today's contacts
+                    if row.get('DayLastContacted') == today:
+                        today_count += 1
+                
+                # Second pass: process each row and decide whether to update
+                for idx, row in enumerate(all_rows):
+                    # Get the chat ID
+                    chat_id = row.get(id_field)
+                    if not chat_id:
+                        rows.append(row)
+                        continue
+                    
+                    # Check if this is the specific contact we're updating
+                    is_target_contact = (chat_id == contact.user_id)
+                    
+                    # Get current position and previous position
+                    current_position = idx
+                    previous_position = previous_orders.get(chat_id, 9999)  # Default to a high number if not found
+                    
+                    # Determine if we should update the DayLastContacted field
+                    should_update = False
+                    
+                    # Always update our target contact (the one we just retrieved messages for)
+                    if is_target_contact:
+                        should_update = True
+                        logger.debug(f"Updating DayLastContacted for target contact {chat_id}")
+                    
+                    # Or update if the chat has moved up in position and we haven't hit our limit
+                    elif current_position < previous_position and today_count < MAX_TODAY_CHATS:
+                        should_update = True
+                        today_count += 1
+                        logger.debug(f"Chat {chat_id} moved up from position {previous_position} to {current_position}, updating DayLastContacted")
+                    
+                    # Update the DayLastContacted field if needed
+                    if should_update:
+                        row['DayLastContacted'] = today
+                        updated = True
+                    elif not row.get('DayLastContacted'):
+                        # For new chats without a date, use yesterday
+                        row['DayLastContacted'] = yesterday
+                        updated = True
+                    
+                    rows.append(row)
+                
+                # Add the new orders to the global dict
+                new_chat_orders[namespace] = namespace_orders
+            
+            # Write the updated content back to the file
+            if updated:
+                with open(csv_file, 'w', encoding='utf-8', newline='') as f:
+                    writer = csv.DictWriter(f, fieldnames=fieldnames)
+                    writer.writeheader()
+                    writer.writerows(rows)
+                logger.info(f"Updated CSV file: {csv_file}")
+        
+        except Exception as e:
+            logger.error(f"Error updating DayLastContacted in {csv_file}: {e}")
+            import traceback
+            logger.debug(traceback.format_exc())
+    
+    # Save the new chat orders
+    save_chat_orders(contacts_dir, new_chat_orders)
+    
+    return updated
+
 def generate_today_yesterday_files() -> bool:
     """
     Generate Telegram-Today.md and Telegram-Yesterday.md files based on the DayLastContacted field.
@@ -1478,92 +1798,18 @@ def process_command(command: str) -> None:
     logger.info(f"Processing messages for contact: {contact}")
     process_messages_for_contact(contact, time_spec)
 
-def update_day_last_contacted(contacts_dir: str, contact: Contact) -> bool:
-    """
-    Update the DayLastContacted field for a contact in all relevant CSV files.
-    
-    Args:
-        contacts_dir: Directory containing contacts CSV files
-        contact: Contact object to update
-        
-    Returns:
-        True if update was successful, False otherwise
-    """
-    today = datetime.now().strftime('%Y-%m-%d')
-    logger.info(f"Updating DayLastContacted to {today} for contact: {contact}")
-    
-    # Find all contact CSV files
-    csv_files = find_contacts_csv_files(contacts_dir)
-    if not csv_files:
-        logger.warning(f"No contact CSV files found in {contacts_dir}")
-        return False
-    
-    updated = False
-    
-    for csv_file in csv_files:
-        try:
-            # Read the entire CSV file
-            rows = []
-            with open(csv_file, 'r', encoding='utf-8') as f:
-                reader = csv.DictReader(f)
-                fieldnames = reader.fieldnames
-                
-                # Skip if no headers found
-                if not fieldnames:
-                    logger.warning(f"CSV file {csv_file} has no headers")
-                    continue
-                
-                # Check if the CSV has the DayLastContacted field
-                if 'DayLastContacted' not in fieldnames:
-                    logger.warning(f"CSV file {csv_file} does not have DayLastContacted field")
-                    continue
-                
-                # Determine which field to use for user ID matching
-                id_field = None
-                for field in ['ID', 'user_id', 'id', 'tg_id']:
-                    if field in fieldnames:
-                        id_field = field
-                        break
-                        
-                if not id_field:
-                    logger.warning(f"CSV file {csv_file} does not have a recognizable ID field")
-                    continue
-                
-                # Process each row
-                for row in reader:
-                    # Check if this is the row for our contact
-                    if row.get(id_field) == contact.user_id:
-                        row['DayLastContacted'] = today
-                        updated = True
-                        logger.debug(f"Updated DayLastContacted for contact {contact.user_id} in {csv_file}")
-                    rows.append(row)
-            
-            # Write the updated content back to the file
-            if updated:
-                with open(csv_file, 'w', encoding='utf-8', newline='') as f:
-                    writer = csv.DictWriter(f, fieldnames=fieldnames)
-                    writer.writeheader()
-                    writer.writerows(rows)
-                logger.info(f"Updated CSV file: {csv_file}")
-        
-        except Exception as e:
-            logger.error(f"Error updating DayLastContacted in {csv_file}: {e}")
-            import traceback
-            logger.debug(traceback.format_exc())
-    
-    return updated
-
 def main():
     """
     Main function.
     """
     parser = argparse.ArgumentParser(description='Process Telegram messages for a contact')
     
-    # Add --today-yesterday-only flag first so we can check it
+    # Add options that don't require identifier
     parser.add_argument('--today-yesterday-only', action='store_true', help='Only generate Today/Yesterday files without processing messages')
+    parser.add_argument('--init-chat-orders', action='store_true', help='Initialize chat orders file from existing CSV files')
     
-    # Only require identifier if not using --today-yesterday-only
-    if '--today-yesterday-only' in sys.argv:
+    # Only require identifier if not using one of the above flags
+    if '--today-yesterday-only' in sys.argv or '--init-chat-orders' in sys.argv:
         parser.add_argument('identifier', nargs='?', help='Username, alias, or chat ID')
     else:
         parser.add_argument('identifier', help='Username, alias, or chat ID')
@@ -1604,6 +1850,12 @@ def main():
     # Override DEFAULT_PATHS
     for key, value in custom_paths.items():
         DEFAULT_PATHS[key] = value
+    
+    # If initializing chat orders, do that and exit
+    if args.init_chat_orders:
+        logger.info("Initializing chat orders file")
+        initialize_chat_orders(DEFAULT_PATHS["contacts_dir"])
+        return 0
     
     # If only generating Today/Yesterday files, do that and exit
     if args.today_yesterday_only:
