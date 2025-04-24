@@ -13,6 +13,7 @@ import subprocess
 from typing import List, Tuple, Optional, Dict, Set
 from datetime import datetime
 import pyperclip
+import time
 
 class ObsidianLinkCollector:
     def __init__(self, vault_path: str = None, max_depth: int = 1, debug: bool = False):
@@ -279,10 +280,11 @@ class ObsidianLinkCollector:
             base_name = filename[:-3]
 
         # Create a list of possible file variants
-        self.try_variants = [base_name, f"{base_name}.md", f"{base_name}🌳.md", 
+        self.try_variants = [base_name, f"{base_name}.md", f"{base_name}🌳.md",
                       f"${base_name}.md", f"@{base_name}.md", f"={base_name}.md",
                       f"$.{base_name}.md", f"$ {base_name}.md", f"$. {base_name}.md"]
-        
+        variant_set = set(self.try_variants) # Use a set for faster lookups
+
         # Common directories to check early
         common_dirs = ["_Outputs_External", "_Outputs_AI", "Dailies_Outputs", "voice-notes", "_official-iteractions-steps", "notes"]
 
@@ -294,7 +296,7 @@ class ObsidianLinkCollector:
             if os.path.exists(full_path):
                 self._debug(f"Found in root directory: {full_path}")
                 return full_path
-                
+
         # Check variants in common subdirectories
         self._debug(f"Checking common subdirectories: {common_dirs}")
         for common_dir in common_dirs:
@@ -313,59 +315,150 @@ class ObsidianLinkCollector:
                 if os.path.exists(full_path_sb):
                      self._debug(f"Found in common directory (__SecondBrain): {full_path_sb}")
                      return full_path_sb
-                     
+
                 # Check within Projects_PKM (another common pattern)
                 projects_pkm_path = os.path.join(second_brain_path, "Projects_PKM")
-                for project_dir in os.listdir(projects_pkm_path): # Check inside each project
-                    project_full_path = os.path.join(projects_pkm_path, project_dir)
-                    if os.path.isdir(project_full_path):
-                       dir_path_proj = os.path.join(project_full_path, common_dir)
-                       full_path_proj = os.path.join(dir_path_proj, variant)
-                       if os.path.exists(full_path_proj):
-                           self._debug(f"Found in common directory (Projects_PKM/{project_dir}): {full_path_proj}")
-                           return full_path_proj
+                if os.path.exists(projects_pkm_path):
+                    try:
+                        for project_dir in os.listdir(projects_pkm_path): # Check inside each project
+                            project_full_path = os.path.join(projects_pkm_path, project_dir)
+                            if os.path.isdir(project_full_path):
+                               dir_path_proj = os.path.join(project_full_path, common_dir)
+                               full_path_proj = os.path.join(dir_path_proj, variant)
+                               if os.path.exists(full_path_proj):
+                                   self._debug(f"Found in common directory (Projects_PKM/{project_dir}): {full_path_proj}")
+                                   return full_path_proj
+                    except OSError as e:
+                         self._debug(f"Error reading project dir {projects_pkm_path}: {e}")
 
 
-        # Perform recursive search through subdirectories if not found yet
-        self._debug(f"File not found in root or common dirs. Searching all subdirectories for: {filename}")
-        
-        # Try a more flexible search looking for the filename in subdirectories
+        # If the input contains a slash, treat as a relative path and check directly
+        if '/' in filename or '\\' in filename:
+            rel_path = os.path.join(self.vault_path, filename)
+            if os.path.exists(rel_path):
+                self._debug(f"Found by direct relative path: {rel_path}")
+                return rel_path
+            # Try with .md
+            if not filename.endswith('.md'):
+                rel_path_md = rel_path + '.md'
+                if os.path.exists(rel_path_md):
+                    self._debug(f"Found by direct relative path with .md: {rel_path_md}")
+                    return rel_path_md
+
+        # Otherwise, do a recursive search for any file whose basename matches any variant
+        self._debug(f"File not found in root or common dirs. Recursively searching for basename matches: {self.try_variants}")
+        start_time = time.time()
+        matches = []
+        max_depth = 15 # Increased depth limit
+        timeout_seconds = 20 # Increased timeout
+
         for root, dirs, files in self._custom_walk(self.vault_path):
-            # Skip directories that start with a dot or underscore 'temp'
-            dirs[:] = [d for d in dirs if not d.startswith('.') and not d == 'temp']
-            
-            # Try all variants in this directory
-            for variant in self.try_variants:
-                full_path = os.path.join(root, variant)
-                if os.path.exists(full_path):
-                    self._debug(f"Found file in subdirectory: {full_path}")
-                    return full_path
-            
-            # Also check for MOC- prefix which might be missing from the search
-            moc_variants = []
-            if not base_name.startswith("MOC-"):
-                moc_variants.append(f"MOC-{base_name}.md")
-            
-            for variant in moc_variants:
-                full_path = os.path.join(root, variant)
-                if os.path.exists(full_path):
-                    self._debug(f"Found MOC file in subdirectory: {full_path}")
-                    return full_path
-                    
-            # Also check for partial matches (file contains the base name)
-            for file in files:
-                if file.endswith('.md') and base_name.lower() in file.lower():
-                    full_path = os.path.join(root, file)
-                    self._debug(f"Found partial match in subdirectory: {full_path}")
-                    return full_path
-        
+             # Calculate depth relative to vault_path
+            try:
+                rel_root = os.path.relpath(root, self.vault_path)
+                depth = 0 if rel_root == '.' else rel_root.count(os.sep) + 1
+            except ValueError:
+                continue # Skip paths outside vault
+
+            # Efficiently check files in the current directory
+            found_in_dir = set(files) & variant_set
+            for found_file in found_in_dir:
+                 full_path = os.path.join(root, found_file)
+                 matches.append(full_path)
+                 # Return immediately if found at shallow depth (<=2)
+                 if depth <= 2:
+                     self._debug(f"Found by recursive basename match (shallow): {full_path}")
+                     # Pick the best among shallow matches if multiple found quickly
+                     if len(matches) > 1:
+                         best_match = min([m for m in matches if os.path.relpath(m, self.vault_path).count(os.sep) + 1 <= 2], key=lambda p: (len(p.split(os.sep)), p))
+                         self._debug(f"Returning best shallow match: {best_match}")
+                         return best_match
+                     return full_path # Return the first shallow match
+
+            # Timeout safeguard
+            if time.time() - start_time > timeout_seconds:
+                self._debug(f"Recursive search timeout ({timeout_seconds}s). Aborting search.")
+                break
+
+        if matches:
+            # Pick the shortest path (closest to root) among all found matches
+            best_match = min(matches, key=lambda p: (len(p.split(os.sep)), p))
+            self._debug(f"Found by recursive basename match: {best_match}")
+            return best_match
+
         self._debug(f"Could not normalize filename: {filename}")
+        print(f"WARNING: Could not find file '{filename}' in vault after recursive search.")
         return None
-        
+
     def _custom_walk(self, top):
-        """A custom walk function that follows symlinks."""
-        for root, dirs, files in os.walk(top, followlinks=True):
-            yield root, dirs, files
+        """A custom walk function that follows symlinks and skips hidden/temp dirs."""
+        # Keep track of visited inodes to prevent cycles
+        visited_inodes_walk = set()
+        queue = [(top, 0)] # (path, depth)
+        max_walk_depth = 15 # Same depth limit as in normalize
+
+        while queue:
+            # Use BFS approach (pop from start) to find shallow files first
+            current_path, current_depth = queue.pop(0)
+
+            # Skip if too deep
+            if current_depth > max_walk_depth:
+                continue
+
+            # Cycle detection for directories using lstat to check link itself first
+            try:
+                current_stat = os.lstat(current_path)
+                current_inode = current_stat.st_ino
+                if current_inode in visited_inodes_walk:
+                    continue # Skip already visited inode (potential cycle)
+                visited_inodes_walk.add(current_inode)
+
+                # If it's a link, check the target inode as well
+                if os.path.islink(current_path):
+                     target_inode = os.stat(current_path).st_ino
+                     if target_inode in visited_inodes_walk:
+                         continue # Skip if link target inode already visited
+                     visited_inodes_walk.add(target_inode)
+
+            except OSError:
+                continue # Skip if stat fails (broken link, permissions)
+
+            # Yield current level
+            try:
+                dirs_to_yield = []
+                files_to_yield = []
+                # Use scandir for potentially better performance and type checking
+                for entry in os.scandir(current_path):
+                    # Skip hidden files/dirs and temp
+                    if entry.name.startswith('.') or entry.name == 'temp':
+                        continue
+
+                    entry_path = os.path.join(current_path, entry.name)
+
+                    if entry.is_dir(follow_symlinks=False): # Check if it's a directory or a link to one
+                       # Check cycle before adding to queue
+                       try:
+                           entry_inode = entry.stat(follow_symlinks=False).st_ino # inode of dir or link itself
+                           target_inode = entry.stat(follow_symlinks=True).st_ino # inode of target dir
+                           if entry_inode not in visited_inodes_walk and target_inode not in visited_inodes_walk:
+                               dirs_to_yield.append(entry.name)
+                               queue.append((entry_path, current_depth + 1))
+                       except OSError:
+                           continue # Skip broken links or permission errors
+                    elif entry.is_file(follow_symlinks=True): # Follow links for files
+                        try:
+                           # Ensure we can stat the file before yielding
+                           entry.stat(follow_symlinks=True)
+                           files_to_yield.append(entry.name)
+                        except OSError:
+                           continue # Skip broken links or permission errors
+
+                # Yield after processing directory contents
+                yield current_path, dirs_to_yield, files_to_yield
+
+            except OSError as e:
+                self._debug(f"Error scanning directory {current_path}: {e}")
+                continue # Skip directories we can't read
 
     def get_statistics(self) -> dict:
         """Get statistics about processed files."""

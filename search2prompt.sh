@@ -2,21 +2,104 @@
 set -e
 # set -o pipefail # Pipefail can mask rg errors when no files are found
 
-# Script to search for a query within specified HypeTrain project directories
+# Script to search for a query within specified project directories
 # using ripgrep (rg), respecting .gitignore, and outputting the full content
 # of matching files in a formatted prompt file.
 
-# --- Configuration ---
-# Comma-separated list of absolute paths to search within
-HYPETRAIN_SEARCH_PATHS_CSV="/Users/user/__Repositories/hypetrain-backend,/Users/user/__Repositories/hypetrain-devops-helm,/Users/user/__Repositories/hypetrain-frontend,/Users/user/__Repositories/hypetrain-dynamic-env-wh-proxy"
-OUTPUT_DIR_ABSOLUTE="/Users/user/____Sandruk/___PKM/temp/code2prompt" # Output directory
+# --- Default Configuration ---
+# These can be overridden by search.conf or command-line args
+DEFAULT_SEARCH_PATHS_CSV=""
+OUTPUT_DIR_ABSOLUTE="/tmp/code2prompt" # Default if config is missing
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+CONFIG_FILE="$SCRIPT_DIR/search.conf"
 
-# --- Input Validation ---
-if [[ -z "$1" ]]; then
-  echo "Usage: $0 <search_query>" >&2
-  exit 1
+# --- Load Configuration File ---
+if [[ -f "$CONFIG_FILE" ]]; then
+  source "$CONFIG_FILE"
+  echo "Loaded configuration from: $CONFIG_FILE"
+else
+  echo "Warning: Configuration file not found at $CONFIG_FILE. Using defaults." >&2
 fi
-QUERY="$1"
+
+# --- Functions ---
+usage() {
+  echo "Usage: $0 [-p "path1,path2,..."] [-h] <search_query>" >&2
+  echo "  <search_query>: The query string to search for (case-insensitive)." >&2
+  echo "  -p, --paths "path1,path2,...": Comma-separated list of absolute paths to search within." >&2
+  echo "                             Overrides paths defined in $CONFIG_FILE." >&2
+  echo "  -h, --help: Display this help message." >&2
+  exit 1
+}
+
+# --- Argument Parsing ---
+# Use getopt for robust argument parsing
+TEMP=$(getopt hp: "$@")
+if [[ $? -ne 0 ]]; then usage; fi
+
+# Note the quotes around '$TEMP': they are essential!
+eval set -- "$TEMP"
+unset TEMP
+
+CUSTOM_PATHS_CSV=""
+
+while true; do
+  case "$1" in
+    '-p')
+      CUSTOM_PATHS_CSV="$2"
+      shift 2
+      continue
+      ;;
+    '-h')
+      usage
+      ;;
+    '--')
+      shift
+      break
+      ;;
+    *)
+      if [[ -z "$QUERY" && $# -gt 0 && "$1" != -* ]]; then
+          QUERY="$1"
+          shift
+          break
+      else
+          echo "Internal error or unexpected argument: $1" >&2
+          usage
+      fi
+      ;;
+  esac
+done
+
+# The remaining argument should be the query
+if [[ -z "$QUERY" ]]; then
+    if [[ $# -eq 1 ]]; then
+        QUERY="$1"
+    else
+        echo "Error: Search query is required or too many arguments remain." >&2
+        echo "Remaining arguments ($#): $@" >&2
+        usage
+    fi
+fi
+
+# Final check if query is actually set
+if [[ -z "$QUERY" ]]; then
+    echo "Error: Search query could not be determined." >&2
+    usage
+fi
+
+# Determine final search paths
+if [[ -n "$CUSTOM_PATHS_CSV" ]]; then
+    SEARCH_PATHS_CSV="$CUSTOM_PATHS_CSV"
+    echo "Using custom search paths from command line."
+else
+    SEARCH_PATHS_CSV="$DEFAULT_SEARCH_PATHS_CSV"
+    echo "Using default search paths from config or defaults."
+fi
+
+# Final check if search paths are defined
+if [[ -z "$SEARCH_PATHS_CSV" ]]; then
+    echo "Error: No search paths defined. Provide paths via -p argument or set DEFAULT_SEARCH_PATHS_CSV in $CONFIG_FILE." >&2
+    exit 1
+fi
 
 # --- Prepare Filename and Output Path ---
 SANITIZED_QUERY=$(echo "$QUERY" | sed 's/[^a-zA-Z0-9]/-/g')
@@ -59,9 +142,9 @@ trap 'rm -f "$ALL_MATCHED_FILES_ABS" "$CURRENT_MATCHED_FILES_REL"' EXIT
 TOTAL_FILES_FOUND=0
 
 # Convert CSV string to array
-IFS=',' read -ra SEARCH_PATHS <<< "$HYPETRAIN_SEARCH_PATHS_CSV"
+IFS=',' read -ra SEARCH_PATHS <<< "$SEARCH_PATHS_CSV"
 
-echo "Searching across specified paths..."
+echo "Searching for '$QUERY' across specified paths..."
 for search_root in "${SEARCH_PATHS[@]}"; do
     echo "--> Searching in: $search_root"
     if [[ ! -d "$search_root" ]]; then
@@ -116,7 +199,7 @@ fi
 > "$OUTPUT_FILE_ABSOLUTE"
 echo "Search Query: '$QUERY'" > "$OUTPUT_FILE_ABSOLUTE"
 echo "Timestamp: $TIMESTAMP" >> "$OUTPUT_FILE_ABSOLUTE"
-echo "Searched Paths: ${HYPETRAIN_SEARCH_PATHS_CSV}" >> "$OUTPUT_FILE_ABSOLUTE"
+echo "Searched Paths: ${SEARCH_PATHS_CSV}" >> "$OUTPUT_FILE_ABSOLUTE"
 echo "" >> "$OUTPUT_FILE_ABSOLUTE"
 echo "Source Tree (All Matched Files):" >> "$OUTPUT_FILE_ABSOLUTE"
 echo "" >> "$OUTPUT_FILE_ABSOLUTE"
