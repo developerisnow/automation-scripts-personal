@@ -33,7 +33,7 @@ usage() {
 
 # --- Argument Parsing ---
 # Use getopt for robust argument parsing
-TEMP=$(getopt hp: "$@")
+TEMP=$(getopt hp:d "$@")
 if [[ $? -ne 0 ]]; then usage; fi
 
 # Note the quotes around '$TEMP': they are essential!
@@ -41,16 +41,22 @@ eval set -- "$TEMP"
 unset TEMP
 
 CUSTOM_PATHS_CSV=""
+DEEP_SEARCH=0
 
 while true; do
   case "$1" in
-    '-p')
+    '-p'|'--paths')
       CUSTOM_PATHS_CSV="$2"
       shift 2
       continue
       ;;
-    '-h')
+    '-h'|'--help')
       usage
+      ;;
+    '-d'|'--deep')
+      DEEP_SEARCH=1
+      shift
+      continue
       ;;
     '--')
       shift
@@ -158,7 +164,12 @@ for search_root in "${SEARCH_PATHS[@]}"; do
     }
 
     # Find files relative to current search_root
-    rg -l -iF "$QUERY" . > "$CURRENT_MATCHED_FILES_REL" || true
+    if [[ "$DEEP_SEARCH" -eq 1 ]]; then
+        RG_FLAGS="-l -iF -uu"
+    else
+        RG_FLAGS="-l -iF"
+    fi
+    rg $RG_FLAGS "$QUERY" . > "$CURRENT_MATCHED_FILES_REL" || true
     current_count=$(wc -l < "$CURRENT_MATCHED_FILES_REL")
     echo "    Found $current_count matching files in this path."
 
@@ -219,7 +230,12 @@ for search_root in "${SEARCH_PATHS[@]}"; do
     cd "$search_root" || continue # Skip if cd fails
 
     # Find matching files relative to this root *again*
-    rg -l -iF "$QUERY" . > "$CURRENT_MATCHED_FILES_REL" || true
+    if [[ "$DEEP_SEARCH" -eq 1 ]]; then
+        RG_FLAGS="-l -iF -uu"
+    else
+        RG_FLAGS="-l -iF"
+    fi
+    rg $RG_FLAGS "$QUERY" . > "$CURRENT_MATCHED_FILES_REL" || true
     current_count=$(wc -l < "$CURRENT_MATCHED_FILES_REL")
 
     # Only add section header if files were found here

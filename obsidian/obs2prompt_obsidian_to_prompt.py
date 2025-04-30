@@ -58,32 +58,42 @@ class ObsidianLinkCollector:
     def _process_file(self, filename: str, current_depth: int = 0, specific_heading: Optional[str] = None) -> None:
         """Process a file and extract its content and links."""
         self._debug(f"Processing file: {filename} at depth {current_depth}")
-            
+        # Log if file is a symlink
+        is_symlink = False
+        link_target = None
+        try:
+            if os.path.islink(filename):
+                is_symlink = True
+                link_target = os.readlink(filename)
+                self._debug(f"File is a symlink: {filename} -> {link_target}")
+        except Exception as e:
+            self._debug(f"Error reading symlink status/target for {filename}: {e}")
+
         # Check if we've already processed this exact file+heading combination
         file_heading_key = f"{filename}#{specific_heading or ''}"
         if file_heading_key in self.visited_files:
             self._debug(f"Skipping already processed file+heading: {file_heading_key}")
             return
-            
+
         # Add to visited files to prevent duplicates
         self.visited_files.add(file_heading_key)
-        
-        # Check if file exists
+
+        # Check if file exists (os.path.exists resolves symlinks)
         if not os.path.exists(filename):
-            self._debug(f"File does not exist: {filename}")
+            self._debug(f"File does not exist or symlink is broken: {filename}")
             return
-            
-        # Read the file content
+
+        # Read the file content (open resolves symlinks)
         try:
             with open(filename, 'r', encoding='utf-8') as f:
                 full_content = f.read()
         except Exception as e:
             self._debug(f"Error reading file {filename}: {str(e)}")
             return
-            
+
         # Determine the content to add (full file or specific section)
         content_to_add = full_content # Default to full content
-        
+
         # If a specific heading is requested, extract that section
         if specific_heading:
             self._debug(f"Looking for heading '{specific_heading}' in {filename}")
@@ -93,22 +103,23 @@ class ObsidianLinkCollector:
                 self._debug(f"Extracted section under heading '{specific_heading}'")
             else:
                 self._debug(f"Heading '{specific_heading}' not found. Adding full file content instead.")
-        
+
         # Store file to content mapping
         self.file_content_map[file_heading_key] = content_to_add
-        
+
         # Add to collected files
         self.collected_files.append((filename, content_to_add))
         self._debug(f"Collected content from: {filename} (Heading: {specific_heading or 'None'})")
-        
+
         # If we've reached the maximum depth, don't process links
         if current_depth >= self.max_depth:
+            self._debug(f"Reached max depth ({self.max_depth}), not following links in {filename}")
             return
-        
+
         # Extract all links and organize them by target file
         raw_links = self.link_pattern.findall(full_content)
         self._debug(f"Found {len(raw_links)} potential links in {filename}")
-        
+
         # Group links by target file
         link_groups = {}
         for match in raw_links:
@@ -271,8 +282,17 @@ class ObsidianLinkCollector:
     def _normalize_filename(self, filename: str) -> Optional[str]:
         """Normalize the filename and find the actual path to the file."""
         # If the file already exists, return it
-        if os.path.exists(os.path.join(self.vault_path, filename)):
-            return os.path.join(self.vault_path, filename)
+        candidate = os.path.join(self.vault_path, filename)
+        if os.path.exists(candidate): # os.path.exists resolves symlinks
+            if os.path.islink(candidate):
+                try:
+                    link_target = os.readlink(candidate)
+                    self._debug(f"Found direct path symlink: {candidate} -> {link_target}")
+                except Exception as e:
+                    self._debug(f"Error reading symlink target for {candidate}: {e}")
+            else:
+                 self._debug(f"Found direct path: {candidate}")
+            return candidate
 
         # If the path includes .md extension, try with and without it
         base_name = filename
@@ -293,8 +313,14 @@ class ObsidianLinkCollector:
         # Check variants in the root directory first
         for variant in self.try_variants:
             full_path = os.path.join(self.vault_path, variant)
-            if os.path.exists(full_path):
-                self._debug(f"Found in root directory: {full_path}")
+            if os.path.exists(full_path): # os.path.exists resolves symlinks
+                self._debug(f"Found variant in root directory: {full_path}")
+                if os.path.islink(full_path):
+                     try:
+                         link_target = os.readlink(full_path)
+                         self._debug(f"  (Symlink -> {link_target})")
+                     except Exception as e:
+                         self._debug(f"  (Error reading symlink target: {e})")
                 return full_path
 
         # Check variants in common subdirectories
@@ -304,16 +330,28 @@ class ObsidianLinkCollector:
                  # Check relative to vault root
                 dir_path_relative = os.path.join(self.vault_path, common_dir)
                 full_path_relative = os.path.join(dir_path_relative, variant)
-                if os.path.exists(full_path_relative):
-                    self._debug(f"Found in common directory (relative): {full_path_relative}")
+                if os.path.exists(full_path_relative): # os.path.exists resolves symlinks
+                    self._debug(f"Found variant in common directory (relative): {full_path_relative}")
+                    if os.path.islink(full_path_relative):
+                        try:
+                            link_target = os.readlink(full_path_relative)
+                            self._debug(f"  (Symlink -> {link_target})")
+                        except Exception as e:
+                            self._debug(f"  (Error reading symlink target: {e})")
                     return full_path_relative
 
                 # Check relative to __SecondBrain (common pattern observed)
                 second_brain_path = os.path.join(self.vault_path, "__SecondBrain")
                 dir_path_sb = os.path.join(second_brain_path, common_dir)
                 full_path_sb = os.path.join(dir_path_sb, variant)
-                if os.path.exists(full_path_sb):
-                     self._debug(f"Found in common directory (__SecondBrain): {full_path_sb}")
+                if os.path.exists(full_path_sb): # os.path.exists resolves symlinks
+                     self._debug(f"Found variant in common directory (__SecondBrain): {full_path_sb}")
+                     if os.path.islink(full_path_sb):
+                         try:
+                             link_target = os.readlink(full_path_sb)
+                             self._debug(f"  (Symlink -> {link_target})")
+                         except Exception as e:
+                             self._debug(f"  (Error reading symlink target: {e})")
                      return full_path_sb
 
                 # Check within Projects_PKM (another common pattern)
@@ -325,8 +363,14 @@ class ObsidianLinkCollector:
                             if os.path.isdir(project_full_path):
                                dir_path_proj = os.path.join(project_full_path, common_dir)
                                full_path_proj = os.path.join(dir_path_proj, variant)
-                               if os.path.exists(full_path_proj):
-                                   self._debug(f"Found in common directory (Projects_PKM/{project_dir}): {full_path_proj}")
+                               if os.path.exists(full_path_proj): # os.path.exists resolves symlinks
+                                   self._debug(f"Found variant in common directory (Projects_PKM/{project_dir}): {full_path_proj}")
+                                   if os.path.islink(full_path_proj):
+                                       try:
+                                           link_target = os.readlink(full_path_proj)
+                                           self._debug(f"  (Symlink -> {link_target})")
+                                       except Exception as e:
+                                           self._debug(f"  (Error reading symlink target: {e})")
                                    return full_path_proj
                     except OSError as e:
                          self._debug(f"Error reading project dir {projects_pkm_path}: {e}")
@@ -335,18 +379,30 @@ class ObsidianLinkCollector:
         # If the input contains a slash, treat as a relative path and check directly
         if '/' in filename or '\\' in filename:
             rel_path = os.path.join(self.vault_path, filename)
-            if os.path.exists(rel_path):
+            if os.path.exists(rel_path): # os.path.exists resolves symlinks
                 self._debug(f"Found by direct relative path: {rel_path}")
+                if os.path.islink(rel_path):
+                    try:
+                        link_target = os.readlink(rel_path)
+                        self._debug(f"  (Symlink -> {link_target})")
+                    except Exception as e:
+                        self._debug(f"  (Error reading symlink target: {e})")
                 return rel_path
             # Try with .md
             if not filename.endswith('.md'):
                 rel_path_md = rel_path + '.md'
-                if os.path.exists(rel_path_md):
+                if os.path.exists(rel_path_md): # os.path.exists resolves symlinks
                     self._debug(f"Found by direct relative path with .md: {rel_path_md}")
+                    if os.path.islink(rel_path_md):
+                         try:
+                             link_target = os.readlink(rel_path_md)
+                             self._debug(f"  (Symlink -> {link_target})")
+                         except Exception as e:
+                             self._debug(f"  (Error reading symlink target: {e})")
                     return rel_path_md
 
         # Otherwise, do a recursive search for any file whose basename matches any variant
-        self._debug(f"File not found in root or common dirs. Recursively searching for basename matches: {self.try_variants}")
+        self._debug(f"File not found directly. Recursively searching for basename matches: {variant_set}")
         start_time = time.time()
         matches = []
         max_depth = 15 # Increased depth limit
@@ -364,6 +420,14 @@ class ObsidianLinkCollector:
             found_in_dir = set(files) & variant_set
             for found_file in found_in_dir:
                  full_path = os.path.join(root, found_file)
+                 # Log if symlink before adding
+                 if os.path.islink(full_path):
+                     try:
+                         link_target = os.readlink(full_path)
+                         self._debug(f"Recursive search found symlink: {full_path} -> {link_target}")
+                     except Exception as e:
+                         self._debug(f"Recursive search found symlink, but error reading target: {full_path}: {e}")
+
                  matches.append(full_path)
                  # Return immediately if found at shallow depth (<=2)
                  if depth <= 2:
@@ -384,6 +448,12 @@ class ObsidianLinkCollector:
             # Pick the shortest path (closest to root) among all found matches
             best_match = min(matches, key=lambda p: (len(p.split(os.sep)), p))
             self._debug(f"Found by recursive basename match: {best_match}")
+            if os.path.islink(best_match):
+                try:
+                    link_target = os.readlink(best_match)
+                    self._debug(f"  (Resolved best match is symlink -> {link_target})")
+                except Exception as e:
+                    self._debug(f"  (Error reading symlink target for best match: {e})")
             return best_match
 
         self._debug(f"Could not normalize filename: {filename}")
@@ -397,31 +467,66 @@ class ObsidianLinkCollector:
         queue = [(top, 0)] # (path, depth)
         max_walk_depth = 15 # Same depth limit as in normalize
 
+        # Add the starting directory's canonical inode to prevent infinite loops if
+        # the vault root itself is part of a cycle, but allow traversal into it initially.
+        try:
+            top_stat = os.stat(os.path.realpath(top))
+            top_inode = (top_stat.st_dev, top_stat.st_ino)
+            # Don't add top_inode to visited_inodes_walk immediately, 
+            # add it only when it's processed from the queue if it's not the initial top path.
+            # This allows entering symlinked directories within the top level initially.
+            self._debug(f"Starting walk from: {top} (inode {top_inode})")
+        except OSError as e:
+            self._debug(f"Cannot stat starting path {top}: {e}. Aborting walk.")
+            return
+
         while queue:
             # Use BFS approach (pop from start) to find shallow files first
             current_path, current_depth = queue.pop(0)
 
             # Skip if too deep
             if current_depth > max_walk_depth:
+                self._debug(f"Skipping path, max depth {max_walk_depth} reached: {current_path}")
                 continue
 
-            # Cycle detection for directories using lstat to check link itself first
+            # --- Cycle Detection --- 
+            # Check the inode of the path *itself* (link or directory)
             try:
-                current_stat = os.lstat(current_path)
-                current_inode = current_stat.st_ino
+                current_lstat = os.lstat(current_path)
+                current_inode = (current_lstat.st_dev, current_lstat.st_ino)
                 if current_inode in visited_inodes_walk:
-                    continue # Skip already visited inode (potential cycle)
+                    self._debug(f"Cycle detected (link/dir inode already visited): {current_path} (inode {current_inode})")
+                    continue
+                # Mark this specific path/link inode as visited *before* processing contents
                 visited_inodes_walk.add(current_inode)
+            except OSError as e:
+                 self._debug(f"Error lstatting path {current_path}: {e}")
+                 continue # Skip if lstat fails
 
-                # If it's a link, check the target inode as well
-                if os.path.islink(current_path):
-                     target_inode = os.stat(current_path).st_ino
+            # Also check the inode of the *resolved* path (target of link or the dir itself)
+            # This handles cases where different links point to the same target directory.
+            try:
+                real_path = os.path.realpath(current_path)
+                # Check if real path exists before statting
+                if not os.path.exists(real_path):
+                     self._debug(f"Skipping non-existent resolved path: {current_path} -> {real_path}")
+                     continue
+                target_stat = os.stat(real_path)
+                target_inode = (target_stat.st_dev, target_stat.st_ino)
+                # Add target inode ONLY if it's different from the link inode itself
+                if target_inode != current_inode:
                      if target_inode in visited_inodes_walk:
-                         continue # Skip if link target inode already visited
+                         self._debug(f"Cycle detected (target inode already visited): {current_path} -> {real_path} (inode {target_inode})")
+                         continue
+                     # Mark target inode as visited *before* processing contents
                      visited_inodes_walk.add(target_inode)
+            except OSError as e:
+                 self._debug(f"Error resolving/statting real path for {current_path}: {e}")
+                 continue # Skip if realpath or stat fails
+            # --- End Cycle Detection ---
 
-            except OSError:
-                continue # Skip if stat fails (broken link, permissions)
+            # Log entry into directory
+            self._debug(f"Scanning directory (depth {current_depth}): {current_path}")
 
             # Yield current level
             try:
@@ -435,23 +540,90 @@ class ObsidianLinkCollector:
 
                     entry_path = os.path.join(current_path, entry.name)
 
-                    if entry.is_dir(follow_symlinks=False): # Check if it's a directory or a link to one
-                       # Check cycle before adding to queue
-                       try:
-                           entry_inode = entry.stat(follow_symlinks=False).st_ino # inode of dir or link itself
-                           target_inode = entry.stat(follow_symlinks=True).st_ino # inode of target dir
-                           if entry_inode not in visited_inodes_walk and target_inode not in visited_inodes_walk:
-                               dirs_to_yield.append(entry.name)
-                               queue.append((entry_path, current_depth + 1))
-                       except OSError:
-                           continue # Skip broken links or permission errors
-                    elif entry.is_file(follow_symlinks=True): # Follow links for files
-                        try:
-                           # Ensure we can stat the file before yielding
-                           entry.stat(follow_symlinks=True)
-                           files_to_yield.append(entry.name)
-                        except OSError:
-                           continue # Skip broken links or permission errors
+                    # Use lstat to check the entry without following links initially
+                    try:
+                        entry_lstat = os.lstat(entry_path)
+                        entry_inode = (entry_lstat.st_dev, entry_lstat.st_ino)
+                        is_symlink_entry = os.path.islink(entry_path)
+                    except OSError as e:
+                         self._debug(f"Error lstatting entry {entry_path}: {e}")
+                         continue # Skip entry if cannot lstat
+
+                    # Check if this entry's inode (link or dir/file) has already been visited
+                    if entry_inode in visited_inodes_walk:
+                        self._debug(f"Skipping already visited entry inode: {entry_path} (inode {entry_inode})")
+                        continue
+
+                    # Handle directories and directory symlinks
+                    # Check if it IS a directory OR (it is a symlink AND its target is a directory)
+                    is_effective_dir = False
+                    try:
+                        if os.path.isdir(entry_path): # This follows links
+                            is_effective_dir = True
+                    except OSError as e:
+                        self._debug(f"Error checking if entry is directory: {entry_path}: {e}")
+                        continue
+                        
+                    if is_effective_dir:
+                        target_inode_entry = None
+                        real_target_path = entry_path
+                        # If it's a symlink, check its resolved target's inode too
+                        if is_symlink_entry:
+                             try:
+                                 real_target_path = os.path.realpath(entry_path)
+                                 if not os.path.exists(real_target_path):
+                                     self._debug(f"Symlink dir target does not exist: {entry_path} -> {real_target_path}")
+                                     continue # Skip broken link
+                                 target_stat_entry = os.stat(real_target_path)
+                                 target_inode_entry = (target_stat_entry.st_dev, target_stat_entry.st_ino)
+                                 self._debug(f"Dir symlink entry: {entry_path} -> {real_target_path} (link_inode {entry_inode}, target_inode {target_inode_entry})")
+                                 # Check target inode for cycles
+                                 if target_inode_entry != entry_inode and target_inode_entry in visited_inodes_walk:
+                                     self._debug(f"Skipping symlink dir - target inode already visited: {real_target_path} (inode {target_inode_entry})")
+                                     continue
+                             except Exception as e:
+                                 self._debug(f"Error reading/statting symlink target for dir entry {entry_path}: {e}")
+                                 continue
+
+                        # If we got here, the entry (dir or link to dir) seems safe to add to queue
+                        self._debug(f"Queueing directory: {entry_path}")
+                        dirs_to_yield.append(entry.name)
+                        queue.append((entry_path, current_depth + 1))
+                        # Mark inodes as visited ONLY AFTER successfully queueing
+                        # visited_inodes_walk.add(entry_inode) 
+                        # We already added current_inode and target_inode at the start of the loop for current_path.
+                        # Adding entry inodes here can prematurely block sibling directories if they are hardlinked.
+                        # Let the check at the start of the while loop handle visited inodes when the path is popped from the queue.
+
+
+                    # Handle files and file symlinks
+                    # Check if it IS a file OR (it is a symlink AND its target is a file)
+                    is_effective_file = False
+                    try:
+                        if os.path.isfile(entry_path): # This follows links
+                             is_effective_file = True
+                    except OSError as e:
+                        self._debug(f"Error checking if entry is file: {entry_path}: {e}")
+                        continue
+                        
+                    if is_effective_file:
+                        # Check target existence for symlinks
+                        if is_symlink_entry:
+                             try:
+                                 real_target_path = os.path.realpath(entry_path)
+                                 if not os.path.exists(real_target_path) or not os.path.isfile(real_target_path):
+                                     self._debug(f"Symlink file target does not exist or is not a file: {entry_path} -> {real_target_path}")
+                                     continue # Skip broken link or link to non-file
+                                 self._debug(f"File symlink entry: {entry_path} -> {real_target_path}")
+                             except OSError as e:
+                                 self._debug(f"Error resolving/checking file symlink target {entry_path}: {e}")
+                                 continue
+                        
+                        # If we got here, it's a file or a valid link to a file
+                        self._debug(f"Yielding file: {entry_path}")
+                        files_to_yield.append(entry.name)
+                        # Mark file/link inode as visited (optional, but can prevent processing hardlinked files twice)
+                        # visited_inodes_walk.add(entry_inode)
 
                 # Yield after processing directory contents
                 yield current_path, dirs_to_yield, files_to_yield

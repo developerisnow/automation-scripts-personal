@@ -3,7 +3,7 @@
 # HypeTrain Backend Code2Prompt Chunking Functions and Aliases
 # Source this file from your .zshrc to make the hc2p* aliases available.
 
-export HYPETRAIN_REPO_PATH="/Users/user/__Repositories/hypetrain-backend"
+export HYPETRAIN_REPO_PATH="/Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend"
 export C2P_SCRIPT_PATH="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh"
 export HT_INFRA_SCRIPT_PATH="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/HypeTrainInfra2Promp.sh"
 

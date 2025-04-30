@@ -3,7 +3,7 @@
 # Standalone script to aggregate HypeTrain infrastructure files into a single prompt file.
 # Does not rely on code2prompt.sh.
 
-HYPETRAIN_REPO_PATH="/Users/user/__Repositories/hypetrain-backend"
+HYPETRAIN_REPO_PATH="/Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend"
 # OUTPUT_DIR_RELATIVE="references/o1-pro" # Relative to repo path
 TIMESTAMP=$(date '+%Y-%m-%d_%H-%M')
 OUTPUT_FILENAME="c2p_infra_${TIMESTAMP}.txt"
@@ -45,16 +45,18 @@ find . -maxdepth 1 -type f -name 'tsconfig.base.json' -print >> "$FOUND_FILES_LI
 find . -maxdepth 1 -type f -name 'lefthook.yml' -print >> "$FOUND_FILES_LIST"
 find . -maxdepth 1 -type f -name 'renovate.json' -print >> "$FOUND_FILES_LIST"
 
-# Find Dockerfiles
+# Find all files
 find apps -path 'apps/*/Dockerfile*' -type f -print >> "$FOUND_FILES_LIST"
-
-# Find Garden files
+find apps -path 'apps/*/Dockerfile.dev*' -type f -print >> "$FOUND_FILES_LIST"
+find apps -path 'apps/*/dockerignore*' -type f -print >> "$FOUND_FILES_LIST"
+find apps -path 'apps/*/yarnrc*' -type f -print >> "$FOUND_FILES_LIST"
+find apps -path 'apps/*/dockerignore*' -type f -print >> "$FOUND_FILES_LIST"
+find apps -path 'apps/*/tsconfig*' -type f -print >> "$FOUND_FILES_LIST"
+find apps -path '*/garden/preview.yml' -type f -print >> "$FOUND_FILES_LIST"
 find apps -path '*/garden/garden.yml' -type f -print >> "$FOUND_FILES_LIST"
-
-# Find test docker-compose files
+find apps -path '*/garden/values.yaml' -type f -print >> "$FOUND_FILES_LIST"
+find apps -path '*/garden/Chart.yaml' -type f -print >> "$FOUND_FILES_LIST"
 find apps -path '*/test/docker-compose.test.yaml' -type f -print >> "$FOUND_FILES_LIST"
-
-# Find GitHub workflows
 find .github/workflows -maxdepth 1 -type f -name '*.yml' -print >> "$FOUND_FILES_LIST"
 
 # Find Migrations (using corrected paths)
@@ -63,8 +65,10 @@ find apps/hypetrain-notification-service/src/infrastructure/storage/migrations -
 find apps/hypetrain-message-processing-service/src/infrastructure/storage/migrations -type f -name '*.ts' -print >> "$FOUND_FILES_LIST"
 find apps/hypetrain-migration-runner/src/migrations -type f -name '*.ts' -print >> "$FOUND_FILES_LIST" # Added migration runner migrations
 
+# Find Garden
+find /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden  -type f -name '*.yml' -print >> "$FOUND_FILES_LIST"
 # Find Scripts
-find scripts -type f -name '*.ts' -print >> "$FOUND_FILES_LIST"
+find scripts -type f -name '*' -print >> "$FOUND_FILES_LIST"
 
 # Find Example Env File
 find apps/hypetrain-api/test -maxdepth 1 -type f -name 'test.env' -print >> "$FOUND_FILES_LIST"
