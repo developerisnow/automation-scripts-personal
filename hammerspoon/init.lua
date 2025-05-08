@@ -1,6 +1,9 @@
 ----------------------------------------------------------
 --  Superwhisper auto-ingest via Hammerspoon pathwatcher --
 ----------------------------------------------------------
+-- cache of files already scheduled, to prevent duplicate launches
+local processing = {}
+
 local WATCH   = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/__cloud-recordings/_huawei_recordings/_recordings__by_EasyPro"
 local ARCHIVE = WATCH .. "/_transcribed"
 local INBOX  = os.getenv("HOME") .. "/Library/Application Support/Superwhisper/Inbox"
@@ -24,9 +27,15 @@ local function handler(files)
     log("fs event → %s", f)
     if f:find("/_transcribed/") then goto continue end       -- skip already processed
     if not isAudio(f) then 
+      -- ignore subsequent FSEvents for the same file
+      if processing[f] then
+        goto continue
+      end
       log("skip, not audio: %s", f)
       goto continue 
     end                 -- skip non-audio
+    -- mark as in‑process so we launch only once
+    processing[f] = true
     -- дождёмся, когда Nextcloud закроет дескриптор + стабилизируется размер
     hs.timer.doAfter(2, function()
       if not hs.fs.attributes(f) then return end             -- файл уже исчез?
@@ -43,11 +52,12 @@ local function handler(files)
       log("launched: open -a %s %s", APP, f)
       -- archive original after 90 s (enough for import)
       hs.timer.doAfter(90, function()
-          if hs.fs.attributes(infile) then
+          local target = ARCHIVE .. "/" .. base
+          if hs.fs.attributes(infile) and not hs.fs.attributes(target) then
               hs.fs.mkdir(ARCHIVE)
-              local target = ARCHIVE .. "/" .. base
               os.rename(infile, target)
               log("archived %s → %s", infile, target)
+              processing[infile] = nil            -- allow future reprocessing if needed
           end
       end)
       -----------------------------------------------
