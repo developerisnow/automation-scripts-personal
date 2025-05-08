@@ -3,6 +3,7 @@
 ----------------------------------------------------------
 local WATCH   = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/__cloud-recordings/_huawei_recordings/_recordings__by_EasyPro"
 local ARCHIVE = WATCH .. "/_transcribed"
+local INBOX  = os.getenv("HOME") .. "/Library/Application Support/Superwhisper/Inbox"
 local exts    = {wav=true, flac=true, mp3=true, m4a=true}
 
 -- logging helper & app bundle
@@ -32,16 +33,23 @@ local function handler(files)
       -----------------------------------------------
       -- 1. открыть в Superwhisper (импорт & ASR)
       -----------------------------------------------
+      -- copy original file into Superwhisper's watched Inbox first (no race‑condition)
+      local infile = f
+      local base   = infile:match(".+/([^/]+)$")
+      local inboxTarget = INBOX .. "/" .. base
+      hs.execute(string.format('/bin/cp "%s" "%s"', infile, inboxTarget), true)
+      log("copied %s → INBOX", base)
       hs.task.new("/usr/bin/open", nil, {"-a", APP, f}):start()
       log("launched: open -a %s %s", APP, f)
-      -----------------------------------------------
-      -- 2. переместить исходник в _transcribed
-      -----------------------------------------------
-      hs.fs.mkdir(ARCHIVE)                                   -- idempotent
-      local base = f:match(".+/([^/]+)$")
-      local target = ARCHIVE .. "/" .. base
-      os.rename(f, target)                                   -- atomic move
-      log("moved %s → %s", f, target)
+      -- archive original after 90 s (enough for import)
+      hs.timer.doAfter(90, function()
+          if hs.fs.attributes(infile) then
+              hs.fs.mkdir(ARCHIVE)
+              local target = ARCHIVE .. "/" .. base
+              os.rename(infile, target)
+              log("archived %s → %s", infile, target)
+          end
+      end)
       -----------------------------------------------
       -- 3. уведомление (не обязательно)
       -----------------------------------------------
