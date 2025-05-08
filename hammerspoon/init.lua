@@ -6,6 +6,7 @@
 --  • done‑criterion = meta.json                         --
 ----------------------------------------------------------
 local hs               = hs      -- shorten
+local json = require("hs.json")   -- наверх файла, рядом с `hs`
 
 -- ########## CONFIG (edit if paths change) #############
 local WATCH   = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/__cloud-recordings/_huawei_recordings/_recordings__by_EasyPro"
@@ -28,10 +29,12 @@ local function metaExists(base)
       if dir:sub(1,1) ~= "." then
          local meta = RECORDS.."/"..dir.."/meta.json"
          if hs.fs.attributes(meta) then
-            local fh = io.open(meta,"r")
-            local ok = fh and fh:read("*a"):find(base,1,true)
-            if fh then fh:close() end
-            if ok then return true end
+            local ok, tbl = pcall(function()
+                 return json.read(meta)
+            end)
+            if ok and tbl and tbl.audioFile == base then
+               return true
+            end
          end
       end
   end
@@ -46,6 +49,7 @@ local MAX_RUN    = 3600       -- 60 min timeout per file
 -- enqueue new file
 local function enqueue(path)
   local base = basename(path)
+  if processing[base] == "done" then return end
   if processing[base] then return end
   processing[base] = true
   table.insert(queue, path)
@@ -60,10 +64,10 @@ local function tryNext()
   log("▶ importing %s", base)
   -- через 3 с после старта нажимаем Cmd-W (закрыть окно записи)
   hs.timer.doAfter(3, function()
-    local app = hs.appfinder.appFromName(APP)
-    if app then
-      hs.eventtap.keyStroke({"cmd"}, "w", 0, app)
-      log("sent Cmd-W")
+    local appwin = hs.window.filter.new(false):setAppFilter(APP,{allowTitles={".*"}}):getWindows()[1]
+    if appwin then
+        hs.eventtap.keyStroke({"cmd"}, nil, 13, 0, appwin:application())  -- keycode 13 = "w"
+        log("sent Cmd-W")
     end
   end)
 
@@ -84,7 +88,7 @@ local function tryNext()
           if hs.fs.attributes(src) then os.rename(src, dst) end
           log("✓ done %s  (%.0fs)", base, elapsed)
           pollT:stop()
-          processing[base]=nil; busy=false; tryNext()
+          processing[base]="done"; busy=false; tryNext()
       elseif elapsed > MAX_RUN then
           log("⚠ timeout %s  (%.0fs) — will retry later", base, elapsed)
           pollT:stop()
