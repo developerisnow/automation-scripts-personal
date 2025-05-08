@@ -9,8 +9,9 @@ local hs               = hs      -- shorten
 local json = require("hs.json")   -- наверх файла, рядом с `hs`
 
 -- ########## CONFIG (edit if paths change) #############
-local WATCH   = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/__cloud-recordings/_huawei_recordings/_recordings__by_EasyPro"
-local ARCHIVE = WATCH .. "/_transcribed"
+local WATCH_ONEPLUS   = "/Users/user/Recordings_ASR_OnePlus/"
+local WATCH_HUAWEI    = "/Users/user/Recordings_ASR_Huawei/"
+local ARCHIVE_BASE_PATH = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/_transcribed"
 local RECORDS = os.getenv("HOME") .. "/Documents/superwhisper/recordings"
 local APP     = "Superwhisper"
 
@@ -88,17 +89,61 @@ local function tryNext()
       local elapsed = os.time()-t0
       -- log("POLL: Checking status for %s (elapsed: %.0fs)", base, elapsed) -- Keep this if you like, or remove
       
-      local found_meta_json_path = findMetaJsonPath(base) -- Call the renamed function
+      local found_meta_json_path = findMetaJsonPath(base)
 
       if found_meta_json_path then
           log("✓ Transcription complete for %s. Meta.json: %s", base, found_meta_json_path)
-          -- Archive original preserving recorder sub‑folders
-          local rel  = src:sub(#WATCH + 2)           -- path part after WATCH/
-          local dst  = ARCHIVE .. "/" .. rel         -- e.g. _transcribed/2025/05/...
-          local dstDir = dst:match("(.+)/[^/]+$")
-          hs.fs.mkdir(dstDir)                        -- create nested dirs if absent
-          if hs.fs.attributes(src) then os.rename(src, dst) end
-          log("✓ Archived %s to %s (%.0fs)", base, dst, elapsed)
+          
+          -- Archive original with new YYYY/MM/DD structure
+          local yyyy, mm, dd = nil, nil, nil
+          local meta_file_content = nil
+          local f_meta = io.open(found_meta_json_path, "r")
+          if f_meta then
+              meta_file_content = f_meta:read("*a")
+              f_meta:close()
+              -- Extract YYYY-MM-DD from "datetime" : "YYYY-MM-DDTHH:MM:SS"
+              local dt_str_match = meta_file_content:match([["datetime"%s*:%s*"([%d%-%dT%:%fZS%.]+)"]])
+              if dt_str_match then
+                  yyyy = dt_str_match:match("^(%d%d%d%d)")
+                  mm   = dt_str_match:match("^%d%d%d%d%-(%d%d)")
+                  dd   = dt_str_match:match("^%d%d%d%d%-%d%d%-(%d%d)")
+              end
+          end
+
+          if not (yyyy and mm and dd) then
+              log("⚠ Could not extract YYYY/MM/DD from meta.json for archiving: %s. Using current date as fallback.", found_meta_json_path)
+              local now = os.date("*t")
+              yyyy = string.format("%04d", now.year)
+              mm = string.format("%02d", now.month)
+              dd = string.format("%02d", now.day)
+          end
+
+          local rel_path_from_watch_dir = ""
+          local original_filename = basename(src)
+          local original_src_dir_path = src:match("(.+)/[^/]+$") or ""
+
+          if src:sub(1, #WATCH_ONEPLUS) == WATCH_ONEPLUS then
+              rel_path_from_watch_dir = original_src_dir_path:sub(#WATCH_ONEPLUS + 1)
+          elseif src:sub(1, #WATCH_HUAWEI) == WATCH_HUAWEI then
+              rel_path_from_watch_dir = original_src_dir_path:sub(#WATCH_HUAWEI + 1)
+          end
+          if rel_path_from_watch_dir:sub(1,1) == "/" then rel_path_from_watch_dir = rel_path_from_watch_dir:sub(2) end
+          if rel_path_from_watch_dir:sub(-1) == "/" then rel_path_from_watch_dir = rel_path_from_watch_dir:sub(1, -2) end
+
+          local archive_target_dir = ARCHIVE_BASE_PATH .. "/" .. yyyy .. "/" .. mm .. "/" .. dd
+          if rel_path_from_watch_dir and #rel_path_from_watch_dir > 0 then
+              archive_target_dir = archive_target_dir .. "/" .. rel_path_from_watch_dir
+          end
+          
+          hs.fs.mkdir(archive_target_dir)
+          local dst_file_final = archive_target_dir .. "/" .. original_filename
+
+          if hs.fs.attributes(src) then 
+              os.rename(src, dst_file_final)
+              log("✓ Archived %s to %s (%.0fs)", base, dst_file_final, elapsed)
+          else
+              log("⚠ Source file %s not found for archiving.", src)
+          end
 
           -- Call Python script to aggregate into Obsidian
           local python_script_path = os.getenv("HOME") .. "/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/transcription_aggregation_obsidian.py"
@@ -122,12 +167,14 @@ local function tryNext()
 end
 
 -- ########## SCAN EXISTING FILES #######################
-local function scanDir(dir)
-  for entry in hs.fs.dir(dir) do
-      if entry ~= "." and entry ~= ".." and entry ~= "_transcribed" then
-         local p = dir.."/"..entry
+local function scanDir(dir_to_scan)
+  log("Scanning directory: %s", dir_to_scan)
+  for entry in hs.fs.dir(dir_to_scan) do
+      if entry ~= "." and entry ~= ".." and entry ~= "_transcribed" then -- Ensure _transcribed is not scanned if it's a subfolder of WATCH
+         local p = dir_to_scan.."/"..entry
          local attr = hs.fs.attributes(p)
          if attr and attr.mode == "file" and isAudio(entry) then
+            log("Initial scan: found audio %s", p)
             enqueue(p)
          elseif attr and attr.mode == "directory" then
             scanDir(p)
@@ -135,16 +182,27 @@ local function scanDir(dir)
       end
   end
 end
-scanDir(WATCH)         -- initial load
-hs.timer.doAfter(1, tryNext) -- Reverted to 1s, adjust if needed
+scanDir(WATCH_ONEPLUS)    -- initial load for OnePlus
+scanDir(WATCH_HUAWEI)     -- initial load for Huawei
+hs.timer.doAfter(1, tryNext)
 
 -- ########## WATCHER ###################################
-local function handler(paths)
+local function fileEventHandler(paths)
   for _,p in ipairs(paths) do
-      if isAudio(p) and not p:find("/_transcribed/") then
-         enqueue(p);  tryNext()
+      -- Check if the path is within one of the main watch folders and not in an archive path itself
+      local is_in_oneplus_watch = p:sub(1, #WATCH_ONEPLUS) == WATCH_ONEPLUS
+      local is_in_huawei_watch = p:sub(1, #WATCH_HUAWEI) == WATCH_HUAWEI
+      local is_in_archive = p:find(ARCHIVE_BASE_PATH, 1, true) -- Check if path contains archive base path
+
+      if (is_in_oneplus_watch or is_in_huawei_watch) and not is_in_archive then
+          if isAudio(p) then
+             log("Watcher event: detected audio %s", p)
+             enqueue(p);  tryNext()
+          end
       end
   end
 end
-hs.pathwatcher.new(WATCH, handler):start()
-log("watching %s  — initial %d in queue", WATCH, #queue)
+
+hs.pathwatcher.new(WATCH_ONEPLUS, fileEventHandler):start()
+hs.pathwatcher.new(WATCH_HUAWEI, fileEventHandler):start()
+log("Watching %s and %s  — initial %d in queue", WATCH_ONEPLUS, WATCH_HUAWEI, #queue)
