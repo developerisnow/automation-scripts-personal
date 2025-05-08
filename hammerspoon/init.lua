@@ -68,9 +68,11 @@ local function tryNext()
   pollT = hs.timer.doEvery(15, function()
       local elapsed = os.time()-t0
       if metaExists(base) then
-          -- archive original
-          hs.fs.mkdir(ARCHIVE)
-          local dst = ARCHIVE.."/"..base
+          -- archive original preserving recorder sub‑folders
+          local rel  = src:sub(#WATCH + 2)           -- path part after WATCH/
+          local dst  = ARCHIVE .. "/" .. rel         -- e.g. _transcribed/2025/05/...
+          local dstDir = dst:match("(.+)/[^/]+$")
+          hs.fs.mkdir(dstDir)                        -- create nested dirs if absent
           if hs.fs.attributes(src) then os.rename(src, dst) end
           log("✓ done %s  (%.0fs)", base, elapsed)
           pollT:stop()
