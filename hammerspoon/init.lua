@@ -25,19 +25,31 @@ local function basename(p) return p:match("[^/]+$") end
 
 -- find meta.json that references <baseName>
 local function metaExists(base)
+  log("metaExists: Entered for base '%s'", base)
+  local dir_count = 0
   for dir in hs.fs.dir(RECORDS) do
+      dir_count = dir_count + 1
       if dir:sub(1,1) ~= "." then
          local meta = RECORDS.."/"..dir.."/meta.json"
          if hs.fs.attributes(meta) then
+            -- log("metaExists: Checking meta.json in %s", RECORDS.."/"..dir)
             local ok, tbl = pcall(function()
                  return json.read(meta)
             end)
             if ok and tbl and tbl.audioFile == base then
+               log("metaExists: Found matching audioFile '%s' in %s", base, meta)
+               log("metaExists: Exiting for base '%s', returning true. Total dirs checked: %d", base, dir_count)
                return true
+            -- else if ok and tbl and tbl.originalFile == base then -- Check originalFile as a fallback if you expect it
+            --    log("metaExists: Found matching originalFile '%s' in %s", base, meta)
+            --    log("metaExists: Exiting for base '%s', returning true. Total dirs checked: %d", base, dir_count)
+            --    return true
             end
          end
       end
   end
+  log("metaExists: Exiting for base '%s', returning false. Total dirs checked: %d", base, dir_count)
+  return false
 end
 
 -- ########## QUEUE / STATE #############################
