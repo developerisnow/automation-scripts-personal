@@ -4,9 +4,9 @@
 if [ -z "$1" ]; then
     echo "Ошибка: Необходимо указать команду или путь к папке."
     echo "Использование:"
-    echo "  $0 <путь к папке>"
-    echo "  $0 bcode2prompt <файл с путями>"
-    echo "  $0 treecode2prompt <путь к папке>"
+    echo "  $0 <путь к папке> [--timestamp]"
+    echo "  $0 bcode2prompt <файл с путями> [--timestamp]"
+    echo "  $0 treecode2prompt <путь к папке> [--timestamp]"
     exit 1
 fi
 
@@ -15,10 +15,32 @@ CURRENT_DIR=$(pwd)
 STATIC_DIR="/Users/user/____Sandruk/___PKM/temp"
 echo "Текущая директория: $CURRENT_DIR"
 
-COMMAND=$1
-INPUT_FOLDER="$2"
+# Parse arguments for --timestamp flag
+TIMESTAMP_FLAG=false
+ARGS=()
+for arg in "$@"; do
+    if [ "$arg" = "--timestamp" ]; then
+        TIMESTAMP_FLAG=true
+    else
+        ARGS+=("$arg")
+    fi
+done
 
-# Check if this is a treecode2prompt command first
+COMMAND=${ARGS[0]}
+INPUT_FOLDER="${ARGS[1]}"
+
+# Helper: get timestamp if needed
+get_output_name() {
+    local base_name="$1"
+    local ext="$2"
+    if [ "$TIMESTAMP_FLAG" = true ]; then
+        local ts=$(date '+%Y-%m-%d_%H-%M')
+        echo "${base_name}_${ts}.${ext}"
+    else
+        echo "${base_name}.${ext}"
+    fi
+}
+
 if [ "$COMMAND" = "treecode2prompt" ]; then
     # If no second argument provided, use current directory
     if [ -z "$INPUT_FOLDER" ]; then
@@ -29,7 +51,7 @@ if [ "$COMMAND" = "treecode2prompt" ]; then
     if [ ! -e "$INPUT_FOLDER" ]; then
         INPUT_FOLDER="$CURRENT_DIR/$INPUT_FOLDER"
         if [ ! -e "$INPUT_FOLDER" ]; then
-            echo "Ошибка: Путь не существует: $2"
+            echo "Ошибка: Путь не существует: ${ARGS[1]}"
             exit 1
         fi
     fi
@@ -41,14 +63,12 @@ if [ "$COMMAND" = "treecode2prompt" ]; then
         FOLDER_NAME=$(basename "$INPUT_FOLDER")
     fi
 
-    # Create both output directories
     OUTPUT_DIR="$STATIC_DIR/code2prompt/"
     DOCS_DIR="$CURRENT_DIR/docs/meta/repo-maps/"
     mkdir -p "$OUTPUT_DIR" "$DOCS_DIR"
 
-    TIMESTAMP=$(date '+%Y-%m-%d_%H-%M')
-    OUTPUT_FILE="${OUTPUT_DIR}tree_src_${TIMESTAMP}.txt"
-    TREE_MD_FILE="${DOCS_DIR}TREE.md"
+    OUTPUT_FILE="$OUTPUT_DIR$(get_output_name "tree_src" "txt")"
+    TREE_MD_FILE="$DOCS_DIR/TREE.md"
 
     # Generate content for both files
     TREE_CONTENT="# Repository Structure\n\nGenerated on: $(date '+%Y-%m-%d %H:%M')\n\n## File Tree\n\`\`\`\n"
@@ -90,19 +110,19 @@ if [ "$COMMAND" = "treecode2prompt" ]; then
     fi
 
 elif [ "$COMMAND" = "bcode2prompt" ]; then
-    if [ -z "$2" ]; then
+    if [ -z "${ARGS[1]}" ]; then
         echo "Ошибка: Необходимо указать файл с путями."
-        echo "Использование: $0 bcode2prompt <файл с путями>"
+        echo "Использование: $0 bcode2prompt <файл с путями> [--timestamp]"
         exit 1
     fi
 
-    INPUT_FILE="$2"
+    INPUT_FILE="${ARGS[1]}"
     # Проверяем, существует ли файл как абсолютный путь или относительный
     if [ ! -f "$INPUT_FILE" ]; then
         # Пробуем относительный путь от текущей директории
-        INPUT_FILE="$CURRENT_DIR/$2"
+        INPUT_FILE="$CURRENT_DIR/${ARGS[1]}"
         if [ ! -f "$INPUT_FILE" ]; then
-            echo "Ошибка: Файл не найден: $2"
+            echo "Ошибка: Файл не найден: ${ARGS[1]}"
             exit 1
         fi
     fi
@@ -110,9 +130,8 @@ elif [ "$COMMAND" = "bcode2prompt" ]; then
     OUTPUT_DIR="$STATIC_DIR/code2prompt/"
     mkdir -p "$OUTPUT_DIR"
 
-    TIMESTAMP=$(date '+%Y-%m-%d_%H-%M')
     FILE_BASENAME=$(basename "$INPUT_FILE" .txt)
-    OUTPUT_FILE="${OUTPUT_DIR}bcode2prompt_${FILE_BASENAME}_${TIMESTAMP}.txt"
+    OUTPUT_FILE="$OUTPUT_DIR$(get_output_name "bcode2prompt_${FILE_BASENAME}" "txt")"
 
     > "$OUTPUT_FILE"  # Создаем или очищаем файл перед записью
 
@@ -166,7 +185,7 @@ elif [ "$COMMAND" = "bcode2prompt" ]; then
 
 else
     # Regular acode2prompt functionality
-    INPUT_FOLDER="$1"
+    INPUT_FOLDER="${ARGS[0]}"
     
     # Получаем путь к папке
     if [ "$INPUT_FOLDER" = "." ]; then
@@ -178,8 +197,7 @@ else
     OUTPUT_DIR="$STATIC_DIR/code2prompt/"
     mkdir -p "$OUTPUT_DIR"
 
-    TIMESTAMP=$(date '+%Y-%m-%d_%H-%M')
-    OUTPUT_FILE="${OUTPUT_DIR}c2p_${FOLDER_NAME}_${TIMESTAMP}.txt"
+    OUTPUT_FILE="$OUTPUT_DIR$(get_output_name "c2p_${FOLDER_NAME}" "txt")"
 
     cd "$CURRENT_DIR" && code2prompt "$INPUT_FOLDER" --tokens --output "$OUTPUT_FILE"
 
