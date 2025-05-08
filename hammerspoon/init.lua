@@ -23,33 +23,28 @@ local function log(fmt, ...) hs.printf("[%s SW‑HS] " .. fmt, ts(), ...) end
 local function isAudio(p)  local e=p:match("^.+%.([^.]+)$"); return e and exts[e:lower()] end
 local function basename(p) return p:match("[^/]+$") end
 
--- find meta.json that references <baseName>
-local function metaExists(base)
-  log("metaExists: Entered for base '%s'", base)
+-- find meta.json that references <baseName> and return its path
+local function findMetaJsonPath(base)
+  log("findMetaJsonPath: Entered for base '%s'", base)
   local dir_count = 0
   for dir in hs.fs.dir(RECORDS) do
       dir_count = dir_count + 1
       if dir:sub(1,1) ~= "." then
-         local meta = RECORDS.."/"..dir.."/meta.json"
-         if hs.fs.attributes(meta) then
-            -- log("metaExists: Checking meta.json in %s", RECORDS.."/"..dir)
+         local meta_path = RECORDS.."/"..dir.."/meta.json"
+         if hs.fs.attributes(meta_path) then
             local ok, tbl = pcall(function()
-                 return json.read(meta)
+                 return json.read(meta_path) -- Read the specific meta_path
             end)
             if ok and tbl and tbl.audioFile == base then
-               log("metaExists: Found matching audioFile '%s' in %s", base, meta)
-               log("metaExists: Exiting for base '%s', returning true. Total dirs checked: %d", base, dir_count)
-               return true
-            -- else if ok and tbl and tbl.originalFile == base then -- Check originalFile as a fallback if you expect it
-            --    log("metaExists: Found matching originalFile '%s' in %s", base, meta)
-            --    log("metaExists: Exiting for base '%s', returning true. Total dirs checked: %d", base, dir_count)
-            --    return true
+               log("findMetaJsonPath: Found matching audioFile '%s' in %s", base, meta_path)
+               log("findMetaJsonPath: Exiting for base '%s', returning path. Total dirs checked: %d", base, dir_count)
+               return meta_path -- Return the path
             end
          end
       end
   end
-  log("metaExists: Exiting for base '%s', returning false. Total dirs checked: %d", base, dir_count)
-  return false
+  log("findMetaJsonPath: Exiting for base '%s', meta.json not found. Total dirs checked: %d", base, dir_count)
+  return nil -- Return nil if not found
 end
 
 -- ########## QUEUE / STATE #############################
@@ -91,14 +86,31 @@ local function tryNext()
   local pollT
   pollT = hs.timer.doEvery(15, function()
       local elapsed = os.time()-t0
-      if metaExists(base) then
-          -- archive original preserving recorder sub‑folders
+      -- log("POLL: Checking status for %s (elapsed: %.0fs)", base, elapsed) -- Keep this if you like, or remove
+      
+      local found_meta_json_path = findMetaJsonPath(base) -- Call the renamed function
+
+      if found_meta_json_path then
+          log("✓ Transcription complete for %s. Meta.json: %s", base, found_meta_json_path)
+          -- Archive original preserving recorder sub‑folders
           local rel  = src:sub(#WATCH + 2)           -- path part after WATCH/
           local dst  = ARCHIVE .. "/" .. rel         -- e.g. _transcribed/2025/05/...
           local dstDir = dst:match("(.+)/[^/]+$")
           hs.fs.mkdir(dstDir)                        -- create nested dirs if absent
           if hs.fs.attributes(src) then os.rename(src, dst) end
-          log("✓ done %s  (%.0fs)", base, elapsed)
+          log("✓ Archived %s to %s (%.0fs)", base, dst, elapsed)
+
+          -- Call Python script to aggregate into Obsidian
+          local python_script_path = os.getenv("HOME") .. "/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/transcription_aggregation_obsidian.py"
+          local cmd = "/usr/bin/python3"
+          local args = {python_script_path, found_meta_json_path}
+          log("Calling Obsidian aggregation script for: %s", found_meta_json_path)
+          hs.task.new(cmd, function(exitCode, stdOut, stdErr) 
+              log("Obsidian script stdout: %s", stdOut)
+              if stdErr and #stdErr > 0 then log("Obsidian script stderr: %s", stdErr) end
+              if exitCode ~= 0 then log("⚠ Obsidian script failed for %s with exit code %d", found_meta_json_path, exitCode) end
+          end, args):start()
+
           pollT:stop()
           processing[base]="done"; busy=false; tryNext()
       elseif elapsed > MAX_RUN then
@@ -124,7 +136,7 @@ local function scanDir(dir)
   end
 end
 scanDir(WATCH)         -- initial load
-hs.timer.doAfter(1, tryNext)
+hs.timer.doAfter(1, tryNext) -- Reverted to 1s, adjust if needed
 
 -- ########## WATCHER ###################################
 local function handler(paths)
