@@ -58,6 +58,14 @@ local function tryNext()
   local src = table.remove(queue,1)
   local base = basename(src)
   log("▶ importing %s", base)
+  -- через 3 с после старта нажимаем Cmd-W (закрыть окно записи)
+  hs.timer.doAfter(3, function()
+    local app = hs.appfinder.appFromName(APP)
+    if app then
+      hs.eventtap.keyStroke({"cmd"}, "w", 0, app)
+      log("sent Cmd-W")
+    end
+  end)
 
   -- open file (SuperWhisper creates its own copy)
   hs.task.new("/usr/bin/open", nil, {"-a", APP, src}):start()
