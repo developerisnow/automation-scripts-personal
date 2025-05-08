@@ -245,7 +245,13 @@ local function scanDir(dir_to_scan)
   log("Scanning directory: %s", dir_to_scan)
   for entry in hs.fs.dir(dir_to_scan) do
       if entry ~= "." and entry ~= ".." and entry:lower() ~= "_transcribed" and entry:lower() ~= ".stfolder" and entry:lower() ~= ".ds_store" then
-         local p = dir_to_scan .. entry -- Corrected path concatenation
+         -- Ensure dir_to_scan ends with a slash before concatenating entry
+         local correctly_formed_dir_path = dir_to_scan
+         if correctly_formed_dir_path:sub(-1) ~= "/" then
+             correctly_formed_dir_path = correctly_formed_dir_path .. "/"
+         end
+         local p = correctly_formed_dir_path .. entry
+         
          local attr = hs.fs.attributes(p)
          if attr and attr.mode == "file" and isAudio(entry) then
             log("Initial scan: found audio %s", p)
