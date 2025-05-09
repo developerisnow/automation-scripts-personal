@@ -87,42 +87,78 @@ local processing = {}         -- baseName → true while in queue/processing or 
 local MAX_RUN    = 300       -- 5 min max per file
 local MAX_RETRIES = 3           -- abandon file after 3 failed attempts
 local FAILED_DIR  = ARCHIVE_BASE_PATH .. "/_failed"
-local SW_DIR_TIMEOUT = 30      -- give up if SuperWhisper hasn't created its folder after 30 s
+local SW_DIR_TIMEOUT = 45      -- give up if SuperWhisper hasn't created its folder after N seconds (increased from 30)
 local attempts    = {}          -- baseName → retry counter
 
 -- enqueue new file
 local function enqueue(path)
   local base = basename(path)
-
-  -- Skip if we have already finished or permanently failed this file
-  if processing[base] == "done" or processing[base] == "failed" then return end
-
   attempts[base] = (attempts[base] or 0) + 1
   log("enqueue: %s (attempt %d/%d)", base, attempts[base], MAX_RETRIES)
 
   -- Too many failures: quarantine the file and mark as failed
   if attempts[base] > MAX_RETRIES then
-      log("✗ giving up on %s after %d unsuccessful attempts", base, MAX_RETRIES)
+      log("✗ giving up on %s after %d unsuccessful attempts. Moving to FAILED_DIR.", base, MAX_RETRIES)
       hs.fs.mkdir(FAILED_DIR)
-      os.rename(path, FAILED_DIR .. "/" .. base)  -- best‑effort move
-      processing[base] = "failed"
+      -- Ensure the source file still exists before attempting to move
+      if hs.fs.attributes(path) then
+        local failed_dst = FAILED_DIR .. "/" .. base
+        local ren_ok, ren_err = os.rename(path, failed_dst)
+        if ren_ok then
+            log("✓ Moved %s to %s", base, failed_dst)
+        else
+            log("⚠ Error moving %s to %s: %s", base, failed_dst, tostring(ren_err))
+        end
+      else
+        log("⚠ Source file %s not found for moving to FAILED_DIR.", path)
+      end
+      processing[base] = "failed" -- Mark as terminally failed
+      -- Remove from queue if it's there (it shouldn't be if this is called from tryNext's failure path)
+      for i = #queue, 1, -1 do
+          if queue[i] == path then
+              table.remove(queue, i)
+              log("Removed %s from queue after marking as failed.", base)
+          end
+      end
+      busy = false -- Free up processor for next item
+      tryNext()    -- Attempt to process next item in queue
       return
   end
 
-  -- If already in process, ignore duplicate watcher events
-  if processing[base] then return end
+  -- Skip if we have already finished or permanently failed this file
+  if processing[base] == "done" or processing[base] == "failed" then
+    log("Enqueue: Skipping %s as it's already '%s'", base, processing[base])
+    -- If it was 'failed' but somehow re-attempted below MAX_RETRIES, reset attempts to avoid instant fail
+    if processing[base] == "failed" and (attempts[base] <= MAX_RETRIES) then
+        attempts[base] = MAX_RETRIES +1 -- Ensure it won't be picked up again by scanDir/watcher
+    end
+    return
+  end
 
+  -- If already in process (e.g. duplicate watcher event while it's in pollT), ignore.
+  -- processing[base] might be true if it's actively being processed by tryNext.
+  if processing[base] == true and busy and #queue > 0 and queue[1] ~= path then -- Check if it's genuinely a new add vs. already processing
+     log("Enqueue: %s already in active processing or queue. Skipping duplicate add.", base)
+     return
+  end
+  
+  log("Enqueue: Adding %s to queue.", base)
   processing[base] = true
   table.insert(queue, path)
 end
 
 -- main worker
 local function tryNext()
-  if busy or #queue==0 then return end
+  if busy or #queue==0 then
+    if #queue == 0 and busy == false then
+        log("Queue is empty and not busy. Waiting for new files.")
+    end
+    return
+  end
   busy = true
   local src = table.remove(queue,1)
   local base = basename(src)
-  log("▶ importing %s", base)
+  log("▶ importing %s (attempt %d/%d)", base, attempts[base] or 1, MAX_RETRIES)
   
   local t_before_open = os.time() -- Time before opening SuperWhisper
 
@@ -130,7 +166,9 @@ local function tryNext()
     local appwin = hs.window.filter.new(false):setAppFilter(APP,{allowTitles={".*"}}):getWindows()[1]
     if appwin then
         hs.eventtap.keyStroke({"cmd"}, nil, 13, 0, appwin:application())  -- keycode 13 = "w"
-        log("sent Cmd-W")
+        log("sent Cmd-W to %s", APP)
+    else
+        log("No window found for %s to send Cmd-W", APP)
     end
   end)
 
@@ -138,29 +176,31 @@ local function tryNext()
 
   local t0 = os.time()
   local pollT
-  local expected_sw_dir_path = nil -- Will store the path to the SuperWhisper dir for this recording
+  local expected_sw_dir_path = nil 
 
-  -- Give SuperWhisper a moment to create its directory, then find it.
-  hs.timer.doAfter(5, function() -- Wait 5 seconds for SW to create its directory
-      -- We are looking for a directory newer than when we started processing this specific file.
-      expected_sw_dir_path = getMostRecentSuperwhisperDir(t_before_open - 10) -- -10s to allow for slight clock differences or delays
+  hs.timer.doAfter(10, function() -- Increased to 10s
+      -- Look for a directory created/modified at or after we triggered 'open -a'
+      -- Pass 'base' for more specific logging in getMostRecentSuperwhisperDir if needed
+      expected_sw_dir_path = getMostRecentSuperwhisperDir(t_before_open - 2) -- t_before_open or t_before_open - 2
       if expected_sw_dir_path then
           log("Identified SuperWhisper directory for %s as %s", base, expected_sw_dir_path)
       else
-          log("⚠ Could not identify SuperWhisper directory for %s after 5s. Polling will be less targeted.", base)
+          log("⚠ Could not identify SuperWhisper directory for %s after 10s. Polling will be less targeted and may lead to SW_DIR_TIMEOUT.", base)
       end
   end)
 
-  pollT = hs.timer.doEvery(15, function() -- Or your preferred interval
+  pollT = hs.timer.doEvery(15, function()
       local elapsed = os.time()-t0
 
-      -- Early abort: SuperWhisper never created its working folder
+      -- Early abort: SuperWhisper never created its working folder, or we couldn't find it
       if (not expected_sw_dir_path) and elapsed > SW_DIR_TIMEOUT then
-          log("✗ Aborting %s: no SuperWhisper dir after %ds", base, elapsed)
+          log("✗ SW_DIR_TIMEOUT for %s: no SuperWhisper dir identified or meta.json found after %ds", base, elapsed)
           pollT:stop()
-          processing[base] = nil
+          processing[base] = nil -- Clear 'true' processing flag to allow re-queue or 'failed' state
           busy = false
-          enqueue(src)     -- counts toward MAX_RETRIES
+          -- This will increment attempts and potentially move to _failed if MAX_RETRIES is hit
+          log("Re-enqueueing %s due to SW_DIR_TIMEOUT.", base) 
+          enqueue(src) 
           tryNext()
           return
       end
@@ -216,28 +256,45 @@ local function tryNext()
           end
 
           local rel_path_from_watch_dir = ""
-          local original_filename = basename(src)
+          local original_filename = base -- Use base as it's already derived
           local original_src_dir_path = src:match("(.+)/[^/]+$") or ""
 
-          if src:sub(1, #WATCH_ONEPLUS) == WATCH_ONEPLUS then
+          if original_src_dir_path:sub(1, #WATCH_ONEPLUS) == WATCH_ONEPLUS then
               rel_path_from_watch_dir = original_src_dir_path:sub(#WATCH_ONEPLUS + 1)
-          elseif src:sub(1, #WATCH_HUAWEI) == WATCH_HUAWEI then
+          elseif original_src_dir_path:sub(1, #WATCH_HUAWEI) == WATCH_HUAWEI then
               rel_path_from_watch_dir = original_src_dir_path:sub(#WATCH_HUAWEI + 1)
           end
-          if rel_path_from_watch_dir:sub(1,1) == "/" then rel_path_from_watch_dir = rel_path_from_watch_dir:sub(2) end
-          if rel_path_from_watch_dir:sub(-1) == "/" then rel_path_from_watch_dir = rel_path_from_watch_dir:sub(1, -2) end
+          
+          -- Normalize rel_path_from_watch_dir: remove leading/trailing slashes
+          if rel_path_from_watch_dir then
+            rel_path_from_watch_dir = rel_path_from_watch_dir:gsub("^/", ""):gsub("/$", "")
+          else
+            rel_path_from_watch_dir = ""
+          end
 
-          local archive_target_dir = ARCHIVE_BASE_PATH .. "/" .. yyyy .. "/" .. mm .. "/" .. dd
+          local archive_target_subpath = yyyy .. "/" .. mm .. "/" .. dd
           if rel_path_from_watch_dir and #rel_path_from_watch_dir > 0 then
-              archive_target_dir = archive_target_dir .. "/" .. rel_path_from_watch_dir
+              -- Only append rel_path_from_watch_dir if it's not already part of yyyy/mm/dd structure
+              -- This logic assumes rel_path_from_watch_dir might be like "2025/05" or "projectX/audio"
+              -- If rel_path_from_watch_dir is "2025/05", we don't want to duplicate it.
+              -- A simple check: if rel_path_from_watch_dir starts with yyyy, it might be redundant.
+              -- For now, we'll assume it's an additional subfolder path.
+              archive_target_subpath = archive_target_subpath .. "/" .. rel_path_from_watch_dir
           end
           
-          hs.fs.mkdir(archive_target_dir)
+          local archive_target_dir = ARCHIVE_BASE_PATH .. "/" .. archive_target_subpath
+          -- Create all necessary parent directories
+          hs.fs.mkdir(archive_target_dir) 
           local dst_file_final = archive_target_dir .. "/" .. original_filename
 
           if hs.fs.attributes(src) then 
-              os.rename(src, dst_file_final)
-              log("✓ Archived %s to %s (%.0fs)", base, dst_file_final, elapsed)
+              local ren_ok, ren_err = os.rename(src, dst_file_final)
+              if ren_ok then
+                log("✓ Archived %s to %s (%.0fs)", base, dst_file_final, elapsed)
+              else
+                log("⚠ Error archiving %s to %s: %s. File may remain in source.", base, dst_file_final, tostring(ren_err))
+                -- Decide if we should retry or mark as done but unarchived
+              end
           else
               log("⚠ Source file %s not found for archiving.", src)
           end
@@ -256,9 +313,11 @@ local function tryNext()
           pollT:stop()
           processing[base]="done"; busy=false; tryNext()
       elseif elapsed > MAX_RUN then
-          log("⚠ timeout %s  (%.0fs) — will retry later", base, elapsed)
+          log("⚠ MAX_RUN timeout for %s (%.0fs)", base, elapsed)
           pollT:stop()
-          processing[base]=nil; busy=false; enqueue(src); tryNext()
+          processing[base]=nil; busy=false;
+          log("Re-enqueueing %s due to MAX_RUN timeout.", base)
+          enqueue(src); tryNext()
       end
   end)
 end
