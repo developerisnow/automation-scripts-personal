@@ -21,7 +21,14 @@ local exts = {wav=true, flac=true, mp3=true, m4a=true}
 -- ########## UTILITIES #################################
 local function ts() return os.date("%H:%M:%S") end
 local function log(fmt, ...) hs.printf("[%s SW‑HS] " .. fmt, ts(), ...) end
-local function isAudio(p)  local e=p:match("^.+%.([^.]+)$%c*$"); return e and exts[e:lower()] end -- added %c*$ to handle potential trailing nulls from some fs events
+-- returns true when the supplied path (full or basename) has an allowed extension
+local function isAudio(p)
+  if not p then return false end
+  -- grab what comes after the last dot
+  local ext = p:match("^.+%.([^.]+)$")
+  if not ext then return false end
+  return exts[ext:lower()] ~= nil       -- wav / flac / mp3 / m4a
+end
 local function basename(p) return p:match("[^/]+$") end
 
 -- Function to find the most recently modified subdirectory in RECORDS
@@ -77,30 +84,34 @@ end
 local queue      = {}         -- FIFO of full paths
 local busy       = false
 local processing = {}         -- baseName → true while in queue/processing or "done"
-local MAX_RUN    = 3600       -- 60 min timeout per file
+local MAX_RUN    = 300       -- 5 min max per file
+local MAX_RETRIES = 3           -- abandon file after 3 failed attempts
+local FAILED_DIR  = ARCHIVE_BASE_PATH .. "/_failed"
+local SW_DIR_TIMEOUT = 30      -- give up if SuperWhisper hasn't created its folder after 30 s
+local attempts    = {}          -- baseName → retry counter
 
 -- enqueue new file
 local function enqueue(path)
   local base = basename(path)
-  if processing[base] == "done" then 
-    log("Enqueue: %s already marked 'done'. Skipping.", base)
-    return 
-  end
-  if processing[base] then 
-    log("Enqueue: %s already in processing. Skipping.", base)
-    return 
+
+  -- Skip if we have already finished or permanently failed this file
+  if processing[base] == "done" or processing[base] == "failed" then return end
+
+  attempts[base] = (attempts[base] or 0) + 1
+  log("enqueue: %s (attempt %d/%d)", base, attempts[base], MAX_RETRIES)
+
+  -- Too many failures: quarantine the file and mark as failed
+  if attempts[base] > MAX_RETRIES then
+      log("✗ giving up on %s after %d unsuccessful attempts", base, MAX_RETRIES)
+      hs.fs.mkdir(FAILED_DIR)
+      os.rename(path, FAILED_DIR .. "/" .. base)  -- best‑effort move
+      processing[base] = "failed"
+      return
   end
 
-  -- Best-effort pre-check if meta.json might already exist from a previous interrupted run
-  -- This is not foolproof as audioFile field might not match `base` directly in all meta.json files
-  -- The main `tryNext` polling logic is more robust using directory modification times.
-  -- if doesMetaJsonExistForBase(base) then
-  --   log("Enqueue: Pre-check found existing meta.json for %s. Marking as done to avoid re-processing.", base)
-  --   processing[base] = "done" -- Mark as done to avoid queueing if SW already processed it.
-  --   return
-  -- end
+  -- If already in process, ignore duplicate watcher events
+  if processing[base] then return end
 
-  log("Enqueue: Adding %s to queue.", base)
   processing[base] = true
   table.insert(queue, path)
 end
@@ -142,6 +153,18 @@ local function tryNext()
 
   pollT = hs.timer.doEvery(15, function() -- Or your preferred interval
       local elapsed = os.time()-t0
+
+      -- Early abort: SuperWhisper never created its working folder
+      if (not expected_sw_dir_path) and elapsed > SW_DIR_TIMEOUT then
+          log("✗ Aborting %s: no SuperWhisper dir after %ds", base, elapsed)
+          pollT:stop()
+          processing[base] = nil
+          busy = false
+          enqueue(src)     -- counts toward MAX_RETRIES
+          tryNext()
+          return
+      end
+
       local meta_json_path_for_current_file = nil
 
       if expected_sw_dir_path then
@@ -251,13 +274,20 @@ local function scanDir(dir_to_scan)
              correctly_formed_dir_path = correctly_formed_dir_path .. "/"
          end
          local p = correctly_formed_dir_path .. entry
-         
          local attr = hs.fs.attributes(p)
-         if attr and attr.mode == "file" and isAudio(entry) then
-            log("Initial scan: found audio %s", p)
-            enqueue(p)
-         elseif attr and attr.mode == "directory" then
-            scanDir(p)
+         if attr then
+            if attr.mode == "file" then
+                log("scanDir: found file %s", p)
+                if isAudio(entry) then
+                    log("Initial scan: found audio %s", p)
+                    enqueue(p)
+                end
+            elseif attr.mode == "directory" then
+                log("scanDir: recursing into subdirectory %s", p)
+                scanDir(p)
+            end
+         else
+            log("scanDir: could not stat %s", p)
          end
       end
   end
