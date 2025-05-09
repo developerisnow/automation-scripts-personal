@@ -90,9 +90,52 @@ local FAILED_DIR  = ARCHIVE_BASE_PATH .. "/_failed"
 local SW_DIR_TIMEOUT = 45      -- give up if SuperWhisper hasn't created its folder after N seconds (increased from 30)
 local attempts    = {}          -- baseName → retry counter
 
+-- Helper function to recursively check if a file exists in a directory
+local function findFileRecursive(baseFilename, dirToSearch)
+    for entry in hs.fs.dir(dirToSearch) do
+        if entry ~= "." and entry ~= ".." then
+            local fullEntryPath = dirToSearch .. "/" .. entry
+            local attr = hs.fs.attributes(fullEntryPath)
+            if attr then
+                if attr.mode == "file" and entry == baseFilename then
+                    return true -- Found the file
+                elseif attr.mode == "directory" then
+                    if findFileRecursive(baseFilename, fullEntryPath) then
+                        return true -- Found in subdirectory
+                    end
+                end
+            end
+        end
+    end
+    return false -- Not found in this directory or its children
+end
+
+-- Check if a file with the same base name already exists in the archive (including _failed)
+local function isAlreadyArchived(baseFilename)
+    if findFileRecursive(baseFilename, ARCHIVE_BASE_PATH) then
+        log("isAlreadyArchived: Found %s in ARCHIVE_BASE_PATH", baseFilename)
+        return true
+    end
+    -- No need to check FAILED_DIR separately if ARCHIVE_BASE_PATH is its parent,
+    -- but if they were parallel, you would:
+    -- if findFileRecursive(baseFilename, FAILED_DIR) then
+    --     log("isAlreadyArchived: Found %s in FAILED_DIR", baseFilename)
+    --     return true
+    -- end
+    return false
+end
+
 -- enqueue new file
 local function enqueue(path)
   local base = basename(path)
+
+  -- Check if already archived BEFORE any attempt logic
+  if isAlreadyArchived(base) then
+    log("Enqueue: Skipping %s as it (or a file with the same name) was already found in the archive destination: %s", base, ARCHIVE_BASE_PATH)
+    processing[base] = "done" -- Mark as done to prevent re-processing by watcher/scan
+    return
+  end
+
   attempts[base] = (attempts[base] or 0) + 1
   log("enqueue: %s (attempt %d/%d)", base, attempts[base], MAX_RETRIES)
 
@@ -283,7 +326,6 @@ local function tryNext()
           end
           
           local archive_target_dir = ARCHIVE_BASE_PATH .. "/" .. archive_target_subpath
-          -- Create all necessary parent directories
           hs.fs.mkdir(archive_target_dir) 
           local dst_file_final = archive_target_dir .. "/" .. original_filename
 
@@ -291,27 +333,42 @@ local function tryNext()
               local ren_ok, ren_err = os.rename(src, dst_file_final)
               if ren_ok then
                 log("✓ Archived %s to %s (%.0fs)", base, dst_file_final, elapsed)
+                -- Verify move
+                if hs.fs.attributes(src) then
+                    log("⚠ CRITICAL: Source file %s STILL EXISTS after successful os.rename to %s!", src, dst_file_final)
+                else
+                    log("✓ Source file %s confirmed removed after archiving.", src)
+                end
+                if not hs.fs.attributes(dst_file_final) then
+                    log("⚠ CRITICAL: Destination file %s DOES NOT EXIST after successful os.rename from %s!", dst_file_final, src)
+                else
+                    log("✓ Destination file %s confirmed created.", dst_file_final)
+                end
+
+                -- Call Python script to aggregate into Obsidian
+                local python_script_path = os.getenv("HOME") .. "/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/transcription_aggregation_obsidian.py"
+                local cmd = "/usr/bin/python3"
+                local args = {python_script_path, meta_json_path_for_current_file} -- Add original_filename later for date extraction
+                log("Calling Obsidian aggregation script for: %s", meta_json_path_for_current_file)
+                hs.task.new(cmd, function(exitCode, stdOut, stdErr) 
+                    log("Obsidian script stdout: %s", stdOut)
+                    if stdErr and #stdErr > 0 then log("Obsidian script stderr: %s", stdErr) end
+                    if exitCode ~= 0 then log("⚠ Obsidian script failed for %s with exit code %d", meta_json_path_for_current_file, exitCode) end
+                end, args):start()
+
+                pollT:stop()
+                processing[base]="done"; busy=false; tryNext()
               else
-                log("⚠ Error archiving %s to %s: %s. File may remain in source.", base, dst_file_final, tostring(ren_err))
-                -- Decide if we should retry or mark as done but unarchived
+                log("⚠ Error archiving %s to %s: %s. File remains in source. Will retry.", base, dst_file_final, tostring(ren_err))
+                pollT:stop()
+                processing[base]=nil; busy=false;
+                log("Re-enqueueing %s due to os.rename failure.", base)
+                enqueue(src); -- This will use the attempt counter
+                tryNext()
               end
           else
               log("⚠ Source file %s not found for archiving.", src)
           end
-
-          -- Call Python script to aggregate into Obsidian
-          local python_script_path = os.getenv("HOME") .. "/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/transcription_aggregation_obsidian.py"
-          local cmd = "/usr/bin/python3"
-          local args = {python_script_path, meta_json_path_for_current_file}
-          log("Calling Obsidian aggregation script for: %s", meta_json_path_for_current_file)
-          hs.task.new(cmd, function(exitCode, stdOut, stdErr) 
-              log("Obsidian script stdout: %s", stdOut)
-              if stdErr and #stdErr > 0 then log("Obsidian script stderr: %s", stdErr) end
-              if exitCode ~= 0 then log("⚠ Obsidian script failed for %s with exit code %d", meta_json_path_for_current_file, exitCode) end
-          end, args):start()
-
-          pollT:stop()
-          processing[base]="done"; busy=false; tryNext()
       elseif elapsed > MAX_RUN then
           log("⚠ MAX_RUN timeout for %s (%.0fs)", base, elapsed)
           pollT:stop()
@@ -353,6 +410,19 @@ local function scanDir(dir_to_scan)
 end
 scanDir(WATCH_ONEPLUS)    -- initial load for OnePlus
 scanDir(WATCH_HUAWEI)     -- initial load for Huawei
+
+if #queue > 0 then
+    log("Sorting initial queue of %d files by filename.", #queue)
+    table.sort(queue, function(a,b)
+        return basename(a) < basename(b)
+    end)
+    if #queue > 0 then -- Check again in case queue became empty during sort (highly unlikely)
+      log("Queue sorted. First item: %s, Last item: %s", basename(queue[1]), basename(queue[#queue]))
+    else
+      log("Queue became empty after attempting to sort.")
+    end
+end
+
 hs.timer.doAfter(1, tryNext)
 
 -- ########## WATCHER ###################################
