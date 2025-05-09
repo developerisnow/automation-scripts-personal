@@ -35,24 +35,36 @@ local function basename(p) return p:match("[^/]+$") end
 -- This is used to find where SuperWhisper is *currently* working or just finished.
 local function getMostRecentSuperwhisperDir(newer_than_timestamp)
     local mostRecentDir = nil
-    local latestModTime = newer_than_timestamp or 0 -- Only look for dirs modified after a certain point
+    local latestModTime = newer_than_timestamp or 0 
+    log("getMostRecentSuperwhisperDir: Searching for dirs in %s newer than timestamp %s", RECORDS, formatTimestampForLog(latestModTime))
     for entry in hs.fs.dir(RECORDS) do
         if entry ~= "." and entry ~= ".." then
             local fullPath = RECORDS .. "/" .. entry
             local attr = hs.fs.attributes(fullPath)
             if attr and attr.mode == "directory" and attr.modification then
+                log("getMostRecentSuperwhisperDir: Checking entry '%s', modtime %s (target: > %s)", fullPath, formatTimestampForLog(attr.modification), formatTimestampForLog(latestModTime))
                 if attr.modification > latestModTime then
+                    log("getMostRecentSuperwhisperDir: Candidate found: %s (new latestModTime: %s)", fullPath, formatTimestampForLog(attr.modification))
                     latestModTime = attr.modification
                     mostRecentDir = fullPath
                 end
             end
         end
     end
-    -- Log only if a directory is found or if a timestamp was provided for context
-    if mostRecentDir or newer_than_timestamp then 
-        log("getMostRecentSuperwhisperDir (newer_than: %s): Found %s (modtime: %s)", newer_than_timestamp or "any", mostRecentDir or "None", latestModTime)
+    if mostRecentDir then 
+        log("getMostRecentSuperwhisperDir: Finally selected %s (modtime: %s)", mostRecentDir, formatTimestampForLog(latestModTime))
+    elseif newer_than_timestamp then
+        log("getMostRecentSuperwhisperDir: No directory found newer than %s.", formatTimestampForLog(newer_than_timestamp))
+    else
+        log("getMostRecentSuperwhisperDir: No directory found without a newer_than condition.")
     end
     return mostRecentDir
+end
+
+-- Helper to make timestamps human-readable in logs
+local function formatTimestampForLog(ts_val)
+    if not ts_val or ts_val == 0 then return "0 (Epoch or nil)" end
+    return os.date("%Y-%m-%d %H:%M:%S", ts_val) .. " (" .. ts_val .. ")"
 end
 
 -- Function to check if a meta.json exists for a given base filename
@@ -156,7 +168,7 @@ local function enqueue(path)
         log("⚠ Source file %s not found for moving to FAILED_DIR.", path)
       end
       processing[base] = "failed" -- Mark as terminally failed
-      -- Remove from queue if it's there (it shouldn't be if this is called from tryNext's failure path)
+      -- Remove from queue if it's there
       for i = #queue, 1, -1 do
           if queue[i] == path then
               table.remove(queue, i)
@@ -164,7 +176,8 @@ local function enqueue(path)
           end
       end
       busy = false -- Free up processor for next item
-      tryNext()    -- Attempt to process next item in queue
+      -- Schedule tryNext to run slightly deferred to avoid potential recursion/scoping issues
+      hs.timer.doAfter(0.1, function() tryNext() end) 
       return
   end
 
@@ -220,17 +233,25 @@ local function tryNext()
   local t0 = os.time()
   local pollT
   local expected_sw_dir_path = nil 
+  local find_dir_attempts = 0
 
-  hs.timer.doAfter(10, function() -- Increased to 10s
-      -- Look for a directory created/modified at or after we triggered 'open -a'
-      -- Pass 'base' for more specific logging in getMostRecentSuperwhisperDir if needed
-      expected_sw_dir_path = getMostRecentSuperwhisperDir(t_before_open - 2) -- t_before_open or t_before_open - 2
-      if expected_sw_dir_path then
-          log("Identified SuperWhisper directory for %s as %s", base, expected_sw_dir_path)
-      else
-          log("⚠ Could not identify SuperWhisper directory for %s after 10s. Polling will be less targeted and may lead to SW_DIR_TIMEOUT.", base)
-      end
-  end)
+  local function findSuperWhisperDir()
+    find_dir_attempts = find_dir_attempts + 1
+    log("Attempt %d to find SuperWhisper dir for %s (t_before_open: %s)", find_dir_attempts, base, formatTimestampForLog(t_before_open))
+    expected_sw_dir_path = getMostRecentSuperwhisperDir(t_before_open - 5) -- Loosen timing slightly (orig -2)
+    if expected_sw_dir_path then
+        log("Identified SuperWhisper directory for %s as %s", base, expected_sw_dir_path)
+    else
+        log("⚠ Could not identify SuperWhisper directory for %s on attempt %d.", base, find_dir_attempts)
+        if find_dir_attempts < 3 and not pollT:running() then -- Try a couple more times if pollT hasn't started its main work
+            hs.timer.doAfter(7, findSuperWhisperDir) -- Try again after 7 seconds
+        else
+            log("Giving up on finding SuperWhisper dir for %s after %d attempts. Polling will rely on meta.json appearance.", base, find_dir_attempts)
+        end
+    end
+  end
+
+  hs.timer.doAfter(7, findSuperWhisperDir) -- Initial attempt after 7s (was 10)
 
   pollT = hs.timer.doEvery(15, function()
       local elapsed = os.time()-t0
@@ -259,7 +280,7 @@ local function tryNext()
                   log("Found meta.json at %s for %s", potential_meta_path, base)
                   meta_json_path_for_current_file = potential_meta_path
               else
-                  log("Found meta.json at %s but it seems too old (mod: %s, t_before_open: %s). Still waiting.", potential_meta_path, meta_attr and meta_attr.modification, t_before_open)
+                  log("Found meta.json at %s but it seems too old (mod: %s, t_before_open: %s). Still waiting.", potential_meta_path, meta_attr and formatTimestampForLog(meta_attr.modification), formatTimestampForLog(t_before_open))
               end
           else
               -- log("Still waiting for meta.json in %s for %s", expected_sw_dir_path, base) -- Can be noisy
@@ -298,9 +319,9 @@ local function tryNext()
               dd = string.format("%02d", now.day)
           end
 
-          local rel_path_from_watch_dir = ""
           local original_filename = base -- Use base as it's already derived
           local original_src_dir_path = src:match("(.+)/[^/]+$") or ""
+          local rel_path_from_watch_dir = ""
 
           if original_src_dir_path:sub(1, #WATCH_ONEPLUS) == WATCH_ONEPLUS then
               rel_path_from_watch_dir = original_src_dir_path:sub(#WATCH_ONEPLUS + 1)
@@ -310,22 +331,31 @@ local function tryNext()
           
           -- Normalize rel_path_from_watch_dir: remove leading/trailing slashes
           if rel_path_from_watch_dir then
-            rel_path_from_watch_dir = rel_path_from_watch_dir:gsub("^/", ""):gsub("/$", "")
+            rel_path_from_watch_dir = rel_path_from_watch_dir:gsub("^[/]*", ""):gsub("[/]*$", "")
           else
             rel_path_from_watch_dir = ""
           end
 
-          local archive_target_subpath = yyyy .. "/" .. mm .. "/" .. dd
-          if rel_path_from_watch_dir and #rel_path_from_watch_dir > 0 then
-              -- Only append rel_path_from_watch_dir if it's not already part of yyyy/mm/dd structure
-              -- This logic assumes rel_path_from_watch_dir might be like "2025/05" or "projectX/audio"
-              -- If rel_path_from_watch_dir is "2025/05", we don't want to duplicate it.
-              -- A simple check: if rel_path_from_watch_dir starts with yyyy, it might be redundant.
-              -- For now, we'll assume it's an additional subfolder path.
-              archive_target_subpath = archive_target_subpath .. "/" .. rel_path_from_watch_dir
+          -- Construct the archive path carefully
+          local archive_date_part = yyyy .. "/" .. mm .. "/" .. dd
+          local archive_target_dir
+
+          -- If rel_path_from_watch_dir already contains the date structure (e.g., "2025/05" or "2025/05/09")
+          -- or if it's empty, we don't want to prepend the date part again or add extra slashes.
+          if rel_path_from_watch_dir == "" then
+            archive_target_dir = ARCHIVE_BASE_PATH .. "/" .. archive_date_part
+          elseif rel_path_from_watch_dir:match("^" .. yyyy .. "/") then -- covers YYYY/MM and YYYY/MM/DD
+            -- This case implies the watch folder itself might have date-based subdirs that Syncthing preserves
+            log("Archive path: rel_path_from_watch_dir '%s' seems to already include date structure. Using it directly under ARCHIVE_BASE_PATH.", rel_path_from_watch_dir)
+            archive_target_dir = ARCHIVE_BASE_PATH .. "/" .. rel_path_from_watch_dir
+          else
+            -- Standard case: append non-date-structured relative path to the date part
+            archive_target_dir = ARCHIVE_BASE_PATH .. "/" .. archive_date_part .. "/" .. rel_path_from_watch_dir
           end
           
-          local archive_target_dir = ARCHIVE_BASE_PATH .. "/" .. archive_target_subpath
+          -- Final cleanup of slashes for archive_target_dir
+          archive_target_dir = archive_target_dir:gsub("//+", "/")
+
           hs.fs.mkdir(archive_target_dir) 
           local dst_file_final = archive_target_dir .. "/" .. original_filename
 
