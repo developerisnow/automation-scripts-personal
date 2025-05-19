@@ -21,6 +21,13 @@ local exts = {wav=true, flac=true, mp3=true, m4a=true}
 -- ########## UTILITIES #################################
 local function ts() return os.date("%H:%M:%S") end
 local function log(fmt, ...) hs.printf("[%s SW‑HS] " .. fmt, ts(), ...) end
+
+-- Helper to make timestamps human-readable in logs
+local function formatTimestampForLog(ts_val)
+    if not ts_val or ts_val == 0 then return "0 (Epoch or nil)" end
+    return os.date("%Y-%m-%d %H:%M:%S", ts_val) .. " (" .. ts_val .. ")"
+end
+
 -- returns true when the supplied path (full or basename) has an allowed extension
 local function isAudio(p)
   if not p then return false end
@@ -29,6 +36,7 @@ local function isAudio(p)
   if not ext then return false end
   return exts[ext:lower()] ~= nil       -- wav / flac / mp3 / m4a
 end
+
 local function basename(p) return p:match("[^/]+$") end
 
 -- Function to find the most recently modified subdirectory in RECORDS
@@ -59,12 +67,6 @@ local function getMostRecentSuperwhisperDir(newer_than_timestamp)
         log("getMostRecentSuperwhisperDir: No directory found without a newer_than condition.")
     end
     return mostRecentDir
-end
-
--- Helper to make timestamps human-readable in logs
-local function formatTimestampForLog(ts_val)
-    if not ts_val or ts_val == 0 then return "0 (Epoch or nil)" end
-    return os.date("%Y-%m-%d %H:%M:%S", ts_val) .. " (" .. ts_val .. ")"
 end
 
 -- Function to check if a meta.json exists for a given base filename
@@ -101,6 +103,7 @@ local MAX_RETRIES = 3           -- abandon file after 3 failed attempts
 local FAILED_DIR  = ARCHIVE_BASE_PATH .. "/_failed"
 local SW_DIR_TIMEOUT = 45      -- give up if SuperWhisper hasn't created its folder after N seconds (increased from 30)
 local attempts    = {}          -- baseName → retry counter
+local tryNext -- Forward declaration
 
 -- Helper function to recursively check if a file exists in a directory
 local function findFileRecursive(baseFilename, dirToSearch)
@@ -204,7 +207,7 @@ local function enqueue(path)
 end
 
 -- main worker
-local function tryNext()
+local function tryNext_actual() -- Renamed to avoid conflict if forward declaration is tricky with scoping
   if busy or #queue==0 then
     if #queue == 0 and busy == false then
         log("Queue is empty and not busy. Waiting for new files.")
@@ -408,6 +411,9 @@ local function tryNext()
       end
   end)
 end
+
+-- Assign the actual function to the forward-declared variable
+tryNext = tryNext_actual
 
 -- ########## SCAN EXISTING FILES #######################
 local function scanDir(dir_to_scan)
