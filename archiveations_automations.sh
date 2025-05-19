@@ -54,12 +54,34 @@ archive_path_zstd() {
     echo "Created archive: ${basename}.tar.zst"
 }
 
+# Generic XZ unpack for .tar.xz or .xz archives
+unxz_path() {
+    if [ -z "$1" ]; then
+        echo "Error: No archive provided"
+        return 1
+    fi
+    local archive="$1"
+    case "$archive" in
+        *.tar.xz|*.txz)
+            tar -xJf "$archive"
+            ;;
+        *.xz)
+            unxz "$archive"
+            ;;
+        *)
+            echo "Error: Unsupported archive extension for XZ unpack: $archive"
+            return 1
+            ;;
+    esac
+    echo "Unpacked archive: $archive"
+}
+
 # Backup repository excluding common large directories
 backup_repo() {
     if [ -z "$1" ]; then
         echo "Error: No repository path provided"
         echo "Usage: backup_repo /path/to/repository"
-        echo "Example: backup_repo /Users/user/__Repositories/LLMs-airpg__belbix"
+        echo "Example: backup_repo "
         return 1
     fi
     
@@ -88,12 +110,14 @@ case "$1" in
     "rmlogsZSTD") archive_logs_zstd ;;
     "xz") archive_path_xz "$2" ;;
     "zstd") archive_path_zstd "$2" ;;
+    "unxz") unxz_path "$2" ;;
     "backup") backup_repo "$2" ;;
-    *) echo "Usage: $0 {rmlogsXZ|rmlogsZSTD|xz path|zstd path|backup repo_path}"
+    *) echo "Usage: $0 {rmlogsXZ|rmlogsZSTD|xz path|zstd path|unxz archive|backup repo_path}"
        echo ""
        echo "Examples:"
-       echo "  $0 backup /Users/user/__Repositories/LLMs-airpg__belbix"
+       echo "  $0 backup LLMs-"
        echo "  $0 xz some_folder"
        echo "  $0 rmlogsXZ"
+       echo "  $0 unxz logs-2025-05-10-1553.tar.xz"
        ;;
 esac 
