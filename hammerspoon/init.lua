@@ -14,9 +14,12 @@ local WATCH_HUAWEI    = "/Users/user/Recordings_ASR_Huawei/"
 local ARCHIVE_BASE_PATH = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/_transcribed"
 local RECORDS = "/Users/user/Documents/superwhisper/recordings"
 
--- store SHA‑1 of already‑archived recordings
-local LOG_ROOT = ARCHIVE_BASE_PATH -- for clarity, alias
-local PROCESSED_HASHES_FILE = LOG_ROOT .. "/processed_hashes.txt"
+-- global log directory for Hammerspoon & this script's operational files
+local HS_LOG_ROOT = "/Users/user/.hammerspoon/logs"
+hs.fs.mkdir(HS_LOG_ROOT) -- Ensure HS log root exists
+
+-- store SHA‑1 of already‑archived recordings in the HS log directory
+local PROCESSED_HASHES_FILE = HS_LOG_ROOT .. "/processed_hashes.txt"
 local processedHashes = {}          -- [sha1]=true
 
 -- load existing hashes into memory (once per reload)
@@ -30,10 +33,6 @@ end
 local APP     = "Superwhisper"
 local TOTAL_INITIAL = 0
 
--- global log directory
-local LOG_ROOT = os.getenv("HOME") .. "/.hammerspoon/logs"
-hs.fs.mkdir(LOG_ROOT)
-
 -- allowed extensions
 local exts = {wav=true, flac=true, mp3=true, m4a=true}
 
@@ -45,7 +44,7 @@ local function ts() return os.date("%H:%M:%S") end
 ------------------------------------------------------------------
 local function writeMsgToDailyLogs(message)
     local date = os.date("%Y-%m-%d")
-    local f = io.open(string.format("%s/%s.log", LOG_ROOT, date), "a")
+    local f = io.open(string.format("%s/%s.log", HS_LOG_ROOT, date), "a") -- Use HS_LOG_ROOT
     if f then
         f:write(message .. "\n")
         f:close()
@@ -324,13 +323,27 @@ local function tryNext_actual() -- Renamed to avoid conflict if forward declarat
 
       -- Early abort: SuperWhisper never created its working folder, or we couldn't find it
       if (not expected_sw_dir_path) and elapsed > SW_DIR_TIMEOUT then
-          log("✗ SW_DIR_TIMEOUT for %s: no SuperWhisper dir identified or meta.json found after %ds", base, elapsed)
+          log("✗ SW_DIR_TIMEOUT for %s: no SuperWhisper dir identified or meta.json found after %ds. Moving to failed.", base, elapsed)
           pollT:stop()
           busy = false
-          -- This will increment attempts and potentially move to _failed if MAX_RETRIES is hit
-          log("Re-enqueueing %s due to SW_DIR_TIMEOUT.", base) 
-          enqueue(src) 
-          tryNext()
+          processing[base] = "failed" -- Mark as terminally failed
+
+          hs.fs.mkdir(FAILED_DIR) -- Ensure FAILED_DIR exists
+          if hs.fs.attributes(src) then
+              local failed_dst = FAILED_DIR .. "/" .. base
+              local ren_ok, ren_err = os.rename(src, failed_dst)
+              if ren_ok then
+                  log("✓ Moved %s to %s due to SW_DIR_TIMEOUT.", base, failed_dst)
+              else
+                  log("⚠ Error moving %s to %s after SW_DIR_TIMEOUT: %s. File remains in source.", base, failed_dst, tostring(ren_err))
+                  -- If move fails, it will be retried on next HS reload if attempts < MAX_RETRIES, or stay.
+                  -- For now, we just log and proceed. It won't be re-enqueued in this session.
+              end
+          else
+              log("⚠ Source file %s not found for moving to FAILED_DIR after SW_DIR_TIMEOUT.", src)
+          end
+          
+          tryNext() -- Process next item in queue
           return
       end
 
@@ -447,7 +460,7 @@ local function tryNext_actual() -- Renamed to avoid conflict if forward declarat
                 end
 
                 -- Call Python script to aggregate into Obsidian
-                local python_script_path = os.getenv("HOME") .. "/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/transcription_aggregation_obsidian.py"
+                local python_script_path = "/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/transcription_aggregation_obsidian.py"
                 local cmd = "/usr/bin/python3"
                 local args = {python_script_path, meta_json_path_for_current_file} -- Add original_filename later for date extraction
                 log("Calling Obsidian aggregation script for: %s", meta_json_path_for_current_file)
