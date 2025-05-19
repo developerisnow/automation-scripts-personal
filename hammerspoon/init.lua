@@ -15,12 +15,34 @@ local ARCHIVE_BASE_PATH = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Re
 local RECORDS = os.getenv("HOME") .. "/Documents/superwhisper/recordings"
 local APP     = "Superwhisper"
 
+-- global log directory
+local LOG_ROOT = os.getenv("HOME") .. "/.hammerspoon/logs"
+hs.fs.mkdir(LOG_ROOT)
+
 -- allowed extensions
 local exts = {wav=true, flac=true, mp3=true, m4a=true}
 
 -- ########## UTILITIES #################################
 local function ts() return os.date("%H:%M:%S") end
-local function log(fmt, ...) hs.printf("[%s SW‑HS] " .. fmt, ts(), ...) end
+
+------------------------------------------------------------------
+-- write each log line to ~/.hammerspoon/logs/YYYY-MM-DD.log     --
+------------------------------------------------------------------
+local function writeMsgToDailyLogs(message)
+    local date = os.date("%Y-%m-%d")
+    local f = io.open(string.format("%s/%s.log", LOG_ROOT, date), "a")
+    if f then
+        f:write(message .. "\n")
+        f:close()
+    end
+end
+
+-- console + file logger (uses writeMsgToDailyLogs)
+local function log(fmt, ...)
+    local msg = string.format("[%s SW-HS] " .. fmt, ts(), ...)
+    hs.printf("%s", msg)            -- console
+    writeMsgToDailyLogs(msg)        -- daily file
+end
 
 -- Helper to make timestamps human-readable in logs
 local function formatTimestampForLog(ts_val)
@@ -140,74 +162,86 @@ local function isAlreadyArchived(baseFilename)
     return false
 end
 
+-- helper: size (MiB), sha1 hash (первые 8 симв), дата создания --
+local function fileInfo(p)
+    local a = hs.fs.attributes(p)
+    local mb = a and string.format("%.1f", (a.size or 0)/1024/1024) or "?"
+    local ct = a and os.date("%Y-%m-%d %H:%M", a.creation) or "?"
+    local h8 = "????????"
+    if a and a.size and a.size > 0 then
+        local ok,out = pcall(function()
+            return hs.execute(string.format("/usr/bin/shasum -a 1 '%s'", p), true)
+        end)
+        if ok and out then h8 = out:match("^(%w%w%w%w%w%w%w%w)") or h8 end
+    end
+    return mb,h8,ct
+end
+
 -- enqueue new file
 local function enqueue(path)
-  local base = basename(path)
-  if processing[base] == true then
-      log("Enqueue: %s already being processed, skipping duplicate watcher event.", base)
-      return
-  end
-
-  -- Check if already archived BEFORE any attempt logic
-  if isAlreadyArchived(base) then
-    log("Enqueue: Skipping %s as it (or a file with the same name) was already found in the archive destination: %s", base, ARCHIVE_BASE_PATH)
-    processing[base] = "done" -- Mark as done to prevent re-processing by watcher/scan
-    return
-  end
-
-  attempts[base] = (attempts[base] or 0) + 1
-  log("enqueue: %s (attempt %d/%d)", base, attempts[base], MAX_RETRIES)
-
-  -- Too many failures: quarantine the file and mark as failed
-  if attempts[base] > MAX_RETRIES then
-      log("✗ giving up on %s after %d unsuccessful attempts. Moving to FAILED_DIR.", base, MAX_RETRIES)
-      hs.fs.mkdir(FAILED_DIR)
-      -- Ensure the source file still exists before attempting to move
-      if hs.fs.attributes(path) then
-        local failed_dst = FAILED_DIR .. "/" .. base
-        local ren_ok, ren_err = os.rename(path, failed_dst)
-        if ren_ok then
-            log("✓ Moved %s to %s", base, failed_dst)
-        else
-            log("⚠ Error moving %s to %s: %s", base, failed_dst, tostring(ren_err))
-        end
-      else
-        log("⚠ Source file %s not found for moving to FAILED_DIR.", path)
-      end
-      processing[base] = "failed" -- Mark as terminally failed
-      -- Remove from queue if it's there
-      for i = #queue, 1, -1 do
-          if queue[i] == path then
-              table.remove(queue, i)
-              log("Removed %s from queue after marking as failed.", base)
-          end
-      end
-      busy = false -- Free up processor for next item
-      -- Schedule tryNext to run slightly deferred to avoid potential recursion/scoping issues
-      hs.timer.doAfter(0.1, function() tryNext() end) 
-      return
-  end
-
-  -- Skip if we have already finished or permanently failed this file
-  if processing[base] == "done" or processing[base] == "failed" then
-    log("Enqueue: Skipping %s as it's already '%s'", base, processing[base])
-    -- If it was 'failed' but somehow re-attempted below MAX_RETRIES, reset attempts to avoid instant fail
-    if processing[base] == "failed" and (attempts[base] <= MAX_RETRIES) then
-        attempts[base] = MAX_RETRIES +1 -- Ensure it won't be picked up again by scanDir/watcher
+    local base = basename(path)
+    if processing[base] == true then
+        log("Enqueue: %s already being processed, skipping duplicate watcher event.", base)
+        return
     end
-    return
-  end
-
-  -- If already in process (e.g. duplicate watcher event while it's in pollT), ignore.
-  -- processing[base] might be true if it's actively being processed by tryNext.
-  if processing[base] == true and busy and #queue > 0 and queue[1] ~= path then -- Check if it's genuinely a new add vs. already processing
-     log("Enqueue: %s already in active processing or queue. Skipping duplicate add.", base)
-     return
-  end
-  
-  log("Enqueue: Adding %s to queue.", base)
-  processing[base] = true
-  table.insert(queue, path)
+    -- Check if already archived BEFORE any attempt logic
+    if isAlreadyArchived(base) then
+        log("Enqueue: Skipping %s as it (or a file with the same name) was already found in the archive destination: %s", base, ARCHIVE_BASE_PATH)
+        processing[base] = "done" -- Mark as done to prevent re-processing by watcher/scan
+        return
+    end
+    attempts[base] = (attempts[base] or 0) + 1
+    local sz,h8,ct = fileInfo(path)
+    log("enqueue: %s  %s MB  sha1:%s  created:%s  (try %d/%d)",
+        base, sz, h8, ct, attempts[base], MAX_RETRIES)
+    -- Too many failures: quarantine the file and mark as failed
+    if attempts[base] > MAX_RETRIES then
+        log("✗ giving up on %s after %d unsuccessful attempts. Moving to FAILED_DIR.", base, MAX_RETRIES)
+        hs.fs.mkdir(FAILED_DIR)
+        -- Ensure the source file still exists before attempting to move
+        if hs.fs.attributes(path) then
+            local failed_dst = FAILED_DIR .. "/" .. base
+            local ren_ok, ren_err = os.rename(path, failed_dst)
+            if ren_ok then
+                log("✓ Moved %s to %s", base, failed_dst)
+                log("mv %s → %s", path, failed_dst)
+            else
+                log("⚠ Error moving %s to %s: %s", base, failed_dst, tostring(ren_err))
+            end
+        else
+            log("⚠ Source file %s not found for moving to FAILED_DIR.", path)
+        end
+        processing[base] = "failed" -- Mark as terminally failed
+        -- Remove from queue if it's there
+        for i = #queue, 1, -1 do
+            if queue[i] == path then
+                table.remove(queue, i)
+                log("Removed %s from queue after marking as failed.", base)
+            end
+        end
+        busy = false -- Free up processor for next item
+        -- Schedule tryNext to run slightly deferred to avoid potential recursion/scoping issues
+        hs.timer.doAfter(0.1, function() tryNext() end) 
+        return
+    end
+    -- Skip if we have already finished or permanently failed this file
+    if processing[base] == "done" or processing[base] == "failed" then
+        log("Enqueue: Skipping %s as it's already '%s'", base, processing[base])
+        -- If it was 'failed' but somehow re-attempted below MAX_RETRIES, reset attempts to avoid instant fail
+        if processing[base] == "failed" and (attempts[base] <= MAX_RETRIES) then
+            attempts[base] = MAX_RETRIES +1 -- Ensure it won't be picked up again by scanDir/watcher
+        end
+        return
+    end
+    -- If already in process (e.g. duplicate watcher event while it's in pollT), ignore.
+    -- processing[base] might be true if it's actively being processed by tryNext.
+    if processing[base] == true and busy and #queue > 0 and queue[1] ~= path then -- Check if it's genuinely a new add vs. already processing
+        log("Enqueue: %s already in active processing or queue. Skipping duplicate add.", base)
+        return
+    end
+    log("Enqueue: Adding %s to queue.", base)
+    processing[base] = true
+    table.insert(queue, path)
 end
 
 -- main worker
@@ -221,6 +255,8 @@ local function tryNext_actual() -- Renamed to avoid conflict if forward declarat
   busy = true
   local src = table.remove(queue,1)
   local base = basename(src)
+  local idx = TOTAL_INITIAL - #queue
+  log("Processing file %d of %d — %s", idx, TOTAL_INITIAL, base)
   log("▶ importing %s (attempt %d/%d)", base, attempts[base] or 1, MAX_RETRIES)
   
   local t_before_open = os.time() -- Time before opening SuperWhisper
@@ -368,6 +404,7 @@ local function tryNext_actual() -- Renamed to avoid conflict if forward declarat
           if hs.fs.attributes(src) then 
               local ren_ok, ren_err = os.rename(src, dst_file_final)
               if ren_ok then
+                log("mv %s → %s", src, dst_file_final)
                 log("✓ Archived %s to %s (%.0fs)", base, dst_file_final, elapsed)
                 -- Verify move
                 if hs.fs.attributes(src) then
@@ -450,6 +487,9 @@ end
 scanDir(WATCH_ONEPLUS)    -- initial load for OnePlus
 scanDir(WATCH_HUAWEI)     -- initial load for Huawei
 
+local TOTAL_INITIAL = #queue
+log("Initial scan found %d audio files to process.", TOTAL_INITIAL)
+
 if #queue > 0 then
     log("Sorting initial queue of %d files by filename.", #queue)
     table.sort(queue, function(a,b)
@@ -497,4 +537,5 @@ end
 
 hs.pathwatcher.new(WATCH_ONEPLUS, fileEventHandler):start()
 hs.pathwatcher.new(WATCH_HUAWEI, fileEventHandler):start()
+hs.alert.show("SW‑HS config reloaded", 1)
 log("Watching %s and %s  — initial %d in queue", WATCH_ONEPLUS, WATCH_HUAWEI, #queue)
