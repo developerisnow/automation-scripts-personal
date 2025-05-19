@@ -13,6 +13,20 @@ local WATCH_ONEPLUS   = "/Users/user/Recordings_ASR_OnePlus/"
 local WATCH_HUAWEI    = "/Users/user/Recordings_ASR_Huawei/"
 local ARCHIVE_BASE_PATH = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/_transcribed"
 local RECORDS = os.getenv("HOME") .. "/Documents/superwhisper/recordings"
+
+-- store SHA‑1 of already‑archived recordings
+local LOG_ROOT = ARCHIVE_BASE_PATH -- for clarity, alias
+local PROCESSED_HASHES_FILE = LOG_ROOT .. "/processed_hashes.txt"
+local processedHashes = {}          -- [sha1]=true
+
+-- load existing hashes into memory (once per reload)
+do
+    local f = io.open(PROCESSED_HASHES_FILE, "r")
+    if f then
+        for line in f:lines() do processedHashes[line]=true end
+        f:close()
+    end
+end
 local APP     = "Superwhisper"
 
 -- global log directory
@@ -162,24 +176,32 @@ local function isAlreadyArchived(baseFilename)
     return false
 end
 
--- helper: size (MiB), sha1 hash (первые 8 симв), дата создания --
+------------------------------------------------------------------
+-- helper: filesize (MiB), full sha1, created date               --
+------------------------------------------------------------------
+local function sha1(path)
+    local ok,out = pcall(function()
+        return hs.execute(string.format("/usr/bin/shasum -a 1 '%s'", path), true)
+    end)
+    if ok and out then return out:match("^(%w+)") end
+end
+
 local function fileInfo(p)
     local a = hs.fs.attributes(p)
     local mb = a and string.format("%.1f", (a.size or 0)/1024/1024) or "?"
     local ct = a and os.date("%Y-%m-%d %H:%M", a.creation) or "?"
-    local h8 = "????????"
-    if a and a.size and a.size > 0 then
-        local ok,out = pcall(function()
-            return hs.execute(string.format("/usr/bin/shasum -a 1 '%s'", p), true)
-        end)
-        if ok and out then h8 = out:match("^(%w%w%w%w%w%w%w%w)") or h8 end
-    end
-    return mb,h8,ct
+    local h  = sha1(p) or "unknown"
+    return mb,h,ct
 end
 
 -- enqueue new file
 local function enqueue(path)
     local base = basename(path)
+    local _,hash,_ = fileInfo(path)
+    if processedHashes[hash] then
+        log("Enqueue: %s skipped — identical checksum already archived (%s)", base, hash)
+        return
+    end
     if processing[base] == true then
         log("Enqueue: %s already being processed, skipping duplicate watcher event.", base)
         return
@@ -191,9 +213,9 @@ local function enqueue(path)
         return
     end
     attempts[base] = (attempts[base] or 0) + 1
-    local sz,h8,ct = fileInfo(path)
+    local sz,hash,ct = fileInfo(path)
     log("enqueue: %s  %s MB  sha1:%s  created:%s  (try %d/%d)",
-        base, sz, h8, ct, attempts[base], MAX_RETRIES)
+        base, sz, hash:sub(1,8), ct, attempts[base], MAX_RETRIES)
     -- Too many failures: quarantine the file and mark as failed
     if attempts[base] > MAX_RETRIES then
         log("✗ giving up on %s after %d unsuccessful attempts. Moving to FAILED_DIR.", base, MAX_RETRIES)
@@ -338,6 +360,7 @@ local function tryNext_actual() -- Renamed to avoid conflict if forward declarat
           log("✓ Transcription complete for %s. Meta.json: %s", base, meta_json_path_for_current_file)
           
           -- Archive original with new YYYY/MM/DD structure
+          local hash = sha1(src) or "unknown"
           local yyyy, mm, dd = nil, nil, nil
           local meta_file_content = nil
           local f_meta = io.open(meta_json_path_for_current_file, "r")
@@ -406,6 +429,10 @@ local function tryNext_actual() -- Renamed to avoid conflict if forward declarat
               if ren_ok then
                 log("mv %s → %s", src, dst_file_final)
                 log("✓ Archived %s to %s (%.0fs)", base, dst_file_final, elapsed)
+                -- remember checksum so future duplicates are skipped
+                processedHashes[hash] = true
+                local hf = io.open(PROCESSED_HASHES_FILE, "a")
+                if hf then hf:write(hash.."\n"); hf:close() end
                 -- Verify move
                 if hs.fs.attributes(src) then
                     log("⚠ CRITICAL: Source file %s STILL EXISTS after successful os.rename to %s!", src, dst_file_final)
