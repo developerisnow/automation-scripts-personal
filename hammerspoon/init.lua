@@ -12,7 +12,7 @@ local json = require("hs.json")   -- наверх файла, рядом с `hs`
 local WATCH_ONEPLUS   = "/Users/user/Recordings_ASR_OnePlus/"
 local WATCH_HUAWEI    = "/Users/user/Recordings_ASR_Huawei/"
 local ARCHIVE_BASE_PATH = "/Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/_transcribed"
-local RECORDS = os.getenv("HOME") .. "/Documents/superwhisper/recordings"
+local RECORDS = "/Users/user/Documents/superwhisper/recordings"
 
 -- store SHA‑1 of already‑archived recordings
 local LOG_ROOT = ARCHIVE_BASE_PATH -- for clarity, alias
@@ -28,6 +28,7 @@ do
     end
 end
 local APP     = "Superwhisper"
+local TOTAL_INITIAL = 0
 
 -- global log directory
 local LOG_ROOT = os.getenv("HOME") .. "/.hammerspoon/logs"
@@ -514,7 +515,7 @@ end
 scanDir(WATCH_ONEPLUS)    -- initial load for OnePlus
 scanDir(WATCH_HUAWEI)     -- initial load for Huawei
 
-local TOTAL_INITIAL = #queue
+TOTAL_INITIAL = #queue
 log("Initial scan found %d audio files to process.", TOTAL_INITIAL)
 
 if #queue > 0 then
