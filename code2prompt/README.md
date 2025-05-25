@@ -105,37 +105,57 @@ bc2p <file>            # Batch processing
 
 ### Templates
 
-Configured templates in `global_settings.templates`:
-- **document**: Code documentation
-- **security**: Security vulnerability analysis
-- **cleanup**: Code quality improvements
-- **bugs**: Bug fixing
-- **performance**: Performance optimization
-- **readme**: README generation
+Templates are custom Handlebars files that you can create for specific use cases. Code2prompt supports custom templates via the `--template` flag:
+
+```bash
+# Using a custom template
+cc2p hypetrain-backend source --template=/path/to/custom.hbs
+
+# Without template (uses default code2prompt format)
+cc2p hypetrain-backend source
+```
+
+Create your own templates following the [Handlebars documentation](https://handlebarsjs.com/) and [code2prompt template guide](https://code2prompt.dev/docs/tutorials/learn_templates/).
 
 ## Examples
 
 ### Real-world Usage
 
 ```bash
-# Get CQRS library context for documentation
-ht-backend-cqrs --template=document
+# Get CQRS library context (272K, 63,031 tokens)
+ht-backend-cqrs
 
-# Analyze security in frontend components
-cc2p hypetrain-frontend components --template=security
-
-# Get infrastructure overview with timestamp
+# Get infrastructure overview with timestamp (404K, 102,993 tokens)
 ht-backend-infra --timestamp
 
-# Full backend analysis for AI agent
-ht-backend-full --template=document --timestamp
+# Full backend analysis for AI agent (4.9M, 1,194,352 tokens)
+ht-backend-full --timestamp
+
+# Integration events library (272K, 63,031 tokens)
+ht-backend-events
+
+# Frontend infrastructure analysis (400K, 100,875 tokens)
+cc2p hypetrain-frontend infrastructure
 ```
 
 ### Output Files
 
 Files are saved to `/Users/user/____Sandruk/___PKM/temp/code2prompt/`:
 - `cc2p_hypetrain-backend_source.txt`
-- `cc2p_hypetrain-backend_source_2024-01-21_14-30.txt` (with timestamp)
+- `cc2p_hypetrain-backend_source_2025-05-25_09-45.txt` (with timestamp)
+
+### Tested Results
+
+Real performance data from HypeTrain backend project:
+
+| Context | File Size | Token Count | Use Case |
+|---------|-----------|-------------|----------|
+| `cqrs` | 272K | 63,031 | CQRS library analysis |
+| `infrastructure` | 404K | 102,993 | DevOps configuration |
+| `integration-events` | 272K | 63,031 | Event system analysis |
+| `libs` | 272K | 63,031 | All shared libraries |
+| `full` | 4.9M | 1,194,352 | Complete project context |
+| Frontend `infrastructure` | 400K | 100,875 | Frontend config analysis |
 
 ## Advanced Features
 
@@ -166,10 +186,13 @@ Common patterns excluded from all contexts:
 
 ### Template Customization
 
-Reference templates by name or path:
+Create and use custom Handlebars templates:
 ```bash
-cc2p project-name context --template=custom-template.hbs
-cc2p project-name context --template=/path/to/template.hbs
+# Create a custom template file
+echo '{{#each files}}{{path}}: {{content}}{{/each}}' > my-template.hbs
+
+# Use the custom template
+cc2p hypetrain-backend source --template=./my-template.hbs
 ```
 
 ## Integration with AI Agents
