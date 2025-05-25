@@ -89,6 +89,12 @@ ht-backend-cleanup
 
 # Refactoring recommendations (272K, 63,303 tokens)
 ht-backend-refactor
+
+# Quality control analysis (288K, 67,193 tokens)
+ht-backend-quality
+
+# Quality control security check (288K, 67,544 tokens)
+ht-backend-quality-check
 ```
 
 ### Template-Specific Aliases
@@ -103,6 +109,8 @@ ht-backend-security             # Security analysis of full backend
 ht-backend-performance          # Performance analysis of source
 ht-backend-refactor             # Refactoring suggestions for libs
 ht-backend-cleanup              # Code cleanup for source
+ht-backend-quality              # Quality control tools analysis
+ht-backend-quality-check        # Security analysis of quality tools
 ```
 
 ### Smart Template Recommendations
@@ -135,6 +143,7 @@ Real performance data from HypeTrain backend project:
 | `libs` + `performance` | 272K | 63,303 | Performance optimization |
 | `source` + `document` | 272K | 63,208 | Source documentation |
 | `cqrs` + `claude` | 272K | 63,208 | Claude XML format |
+| `quality-control` + `security` | 288K | 67,544 | Code quality security analysis |
 
 ## Configuration
 
@@ -150,6 +159,16 @@ Real performance data from HypeTrain backend project:
           "description": "Main source code",
           "include_patterns": ["src/**/*.ts", "libs/**/*.ts"],
           "exclude_patterns": ["**/*.spec.ts", "**/*.test.ts"]
+        },
+        "quality-control": {
+          "description": "Code quality, validation, and checking tools",
+          "include_patterns": [
+            ".lefthook/**/*", ".github/**/*.yml", ".commitlintrc.*",
+            "renovate.json", "package.json", "lefthook.yml", ".eslintrc*",
+            ".gitignore", "docker-compose.yaml", "scripts/**/*",
+            "**/tsconfig.json", "**/jest.config*"
+          ],
+          "exclude_patterns": ["node_modules/**", "dist/**", "**/*.spec.ts"]
         }
       }
     }

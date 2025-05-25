@@ -40,6 +40,7 @@ alias ht-backend-libs='cc2p hypetrain-backend libs'
 alias ht-backend-cqrs='cc2p hypetrain-backend cqrs'
 alias ht-backend-events='cc2p hypetrain-backend integration-events'
 alias ht-backend-infra='cc2p hypetrain-backend infrastructure'
+alias ht-backend-quality='cc2p hypetrain-backend quality-control'
 alias ht-backend-full='cc2p hypetrain-backend full'
 
 alias ht-frontend-source='cc2p hypetrain-frontend source'
@@ -53,6 +54,7 @@ alias ht-backend-performance='cc2p hypetrain-backend source --template=performan
 alias ht-backend-refactor='cc2p hypetrain-backend libs --template=refactor'
 alias ht-backend-claude='cc2p hypetrain-backend cqrs --template=claude'
 alias ht-backend-cleanup='cc2p hypetrain-backend source --template=cleanup'
+alias ht-backend-quality-check='cc2p hypetrain-backend quality-control --template=security'
 
 EOF
 
@@ -75,6 +77,7 @@ echo "  ht-backend-libs                 - HypeTrain backend libraries"
 echo "  ht-backend-cqrs                 - CQRS library only"
 echo "  ht-backend-events               - Integration events only"
 echo "  ht-backend-infra                - Infrastructure files"
+echo "  ht-backend-quality              - Code quality & validation tools"
 echo "  ht-backend-full                 - Complete backend"
 echo ""
 echo "  ht-frontend-source              - Frontend source code"
@@ -88,5 +91,6 @@ echo "  ht-backend-performance          - Performance analysis of source"
 echo "  ht-backend-refactor             - Refactoring suggestions for libs"
 echo "  ht-backend-claude               - Claude XML format for CQRS"
 echo "  ht-backend-cleanup              - Code cleanup for source"
+echo "  ht-backend-quality-check        - Security analysis of quality tools"
 echo ""
 echo "Reload your shell or run: source $SHELL_CONFIG" 

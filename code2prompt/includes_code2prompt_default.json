@@ -85,6 +85,45 @@
             "dist/**"
           ]
         },
+        "quality-control": {
+          "description": "Code quality, validation, and checking tools configuration",
+          "include_patterns": [
+            ".lefthook/**/*",
+            ".github/**/*.yml",
+            ".github/**/*.yaml",
+            ".commitlintrc.yml",
+            ".commitlintrc.js",
+            "env_aggregation.txt",
+            "garden.yml",
+            "renovate.json",
+            "package.json",
+            "README.md",
+            "lefthook.yml",
+            ".yarnrc",
+            ".eslintrc*",
+            ".gitignore",
+            ".dockerignore",
+            "docker-compose.yaml",
+            "scripts/**/*",
+            "Dockerfile*",
+            "**/tsconfig.json",
+            "**/tsconfig.*.json",
+            "**/ampli.json",
+            "**/jest.config*",
+            "**/.nvmrc",
+            "**/.commitlintrc.*"
+          ],
+          "exclude_patterns": [
+            "node_modules/**",
+            "dist/**",
+            "coverage/**",
+            "*.log",
+            ".git/**",
+            "scripts/node_modules/**",
+            "**/*.spec.ts",
+            "**/*.test.ts"
+          ]
+        },
         "full": {
           "description": "Complete project overview",
           "include_patterns": [
@@ -205,7 +244,7 @@
       },
       "security": {
         "description": "Comprehensive security vulnerability analysis",
-        "best_for": ["full", "source", "infrastructure"],
+        "best_for": ["full", "source", "infrastructure", "quality-control"],
         "output_suffix": "_security_analysis"
       },
       "cleanup": {
