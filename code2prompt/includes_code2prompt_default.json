@@ -1,0 +1,188 @@
+{
+  "projects": {
+    "hypetrain-backend": {
+      "project_path": "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend",
+      "default_template": "document-the-code.hbs",
+      "contexts": {
+        "infrastructure": {
+          "description": "Infrastructure and configuration files",
+          "include_patterns": [
+            "docker-compose.yaml",
+            "*.json",
+            "*.yaml",
+            "*.yml",
+            "renovate.json",
+            "tsconfig*.json",
+            "jest.config.js",
+            "package.json",
+            "*.sh"
+          ],
+          "exclude_patterns": [
+            "node_modules/**",
+            "dist/**",
+            "coverage/**",
+            "*.log"
+          ]
+        },
+        "source": {
+          "description": "Main source code",
+          "include_patterns": [
+            "src/**/*.ts",
+            "libs/**/*.ts",
+            "apps/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**",
+            "coverage/**"
+          ]
+        },
+        "libs": {
+          "description": "Shared libraries",
+          "include_patterns": [
+            "libs/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "libs/**/dist/**",
+            "libs/**/node_modules/**",
+            "**/*.spec.ts",
+            "**/*.test.ts"
+          ]
+        },
+        "cqrs": {
+          "description": "CQRS library specifically",
+          "include_patterns": [
+            "libs/cqrs/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "libs/cqrs/dist/**",
+            "libs/cqrs/node_modules/**",
+            "**/*.spec.ts"
+          ]
+        },
+        "integration-events": {
+          "description": "Integration events library",
+          "include_patterns": [
+            "libs/integration-events/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "libs/integration-events/dist/**",
+            "**/*.spec.ts"
+          ]
+        },
+        "tests": {
+          "description": "Test files",
+          "include_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "test/**/*",
+            "tests/**/*"
+          ],
+          "exclude_patterns": [
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "full": {
+          "description": "Complete project overview",
+          "include_patterns": [
+            "**/*.ts",
+            "**/*.js",
+            "**/*.json",
+            "**/*.yaml",
+            "**/*.yml",
+            "**/*.md"
+          ],
+          "exclude_patterns": [
+            "node_modules/**",
+            "dist/**",
+            "coverage/**",
+            "*.log",
+            ".git/**"
+          ]
+        }
+      }
+    },
+    "hypetrain-frontend": {
+      "project_path": "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-frontend",
+      "default_template": "document-the-code.hbs",
+      "contexts": {
+        "infrastructure": {
+          "description": "Frontend infrastructure",
+          "include_patterns": [
+            "package.json",
+            "tsconfig*.json",
+            "*.config.js",
+            "*.config.ts",
+            ".eslintrc*",
+            ".prettierrc*",
+            "vite.config.*",
+            "webpack.config.*"
+          ],
+          "exclude_patterns": [
+            "node_modules/**",
+            "dist/**",
+            "build/**"
+          ]
+        },
+        "source": {
+          "description": "Frontend source code",
+          "include_patterns": [
+            "src/**/*.ts",
+            "src/**/*.tsx",
+            "src/**/*.js",
+            "src/**/*.jsx"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.*",
+            "**/*.test.*",
+            "node_modules/**",
+            "dist/**",
+            "build/**"
+          ]
+        },
+        "components": {
+          "description": "React components",
+          "include_patterns": [
+            "src/components/**/*",
+            "src/ui/**/*"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.*",
+            "**/*.test.*"
+          ]
+        },
+        "styles": {
+          "description": "Styling files",
+          "include_patterns": [
+            "**/*.css",
+            "**/*.scss",
+            "**/*.sass",
+            "**/*.less",
+            "**/*.styled.ts"
+          ],
+          "exclude_patterns": [
+            "node_modules/**"
+          ]
+        }
+      }
+    }
+  },
+  "global_settings": {
+    "output_dir": "/Users/user/____Sandruk/___PKM/temp/code2prompt/",
+    "default_exclude_patterns": [
+      "node_modules/**",
+      ".git/**",
+      "*.log",
+      "coverage/**",
+      ".DS_Store",
+      "*.tmp",
+      "*.temp"
+    ],
+    "templates": {
+      "note": "Templates are custom Handlebars files - create your own or use code2prompt without templates"
+    }
+  }
+}
