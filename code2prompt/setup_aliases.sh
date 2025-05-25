@@ -30,6 +30,9 @@ alias bc2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code
 # Quick project context aliases
 alias c2p-projects='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listprojects'
 alias c2p-contexts='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listcontexts'
+alias c2p-templates='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listtemplates'
+alias c2p-template-info='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh templateinfo'
+alias c2p-smart='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh smarttemplate'
 
 # Quick hypetrain contexts
 alias ht-backend-source='cc2p hypetrain-backend source'
@@ -43,6 +46,14 @@ alias ht-frontend-source='cc2p hypetrain-frontend source'
 alias ht-frontend-components='cc2p hypetrain-frontend components'
 alias ht-frontend-infra='cc2p hypetrain-frontend infrastructure'
 
+# Template-specific aliases
+alias ht-backend-docs='cc2p hypetrain-backend source --template=document'
+alias ht-backend-security='cc2p hypetrain-backend full --template=security'
+alias ht-backend-performance='cc2p hypetrain-backend source --template=performance'
+alias ht-backend-refactor='cc2p hypetrain-backend libs --template=refactor'
+alias ht-backend-claude='cc2p hypetrain-backend cqrs --template=claude'
+alias ht-backend-cleanup='cc2p hypetrain-backend source --template=cleanup'
+
 EOF
 
 echo "Aliases added to $SHELL_CONFIG"
@@ -54,6 +65,9 @@ echo "  treec2p <folder>                - Tree structure generation"
 echo "  bc2p <file>                     - Batch processing"
 echo "  c2p-projects                    - List available projects"
 echo "  c2p-contexts <project>          - List contexts for project"
+echo "  c2p-templates                   - List available templates"
+echo "  c2p-template-info <template>    - Get template information"
+echo "  c2p-smart <project> <context> <template> - Smart template recommendation"
 echo ""
 echo "Quick project aliases:"
 echo "  ht-backend-source               - HypeTrain backend source code"
@@ -66,5 +80,13 @@ echo ""
 echo "  ht-frontend-source              - Frontend source code"
 echo "  ht-frontend-components          - React components"
 echo "  ht-frontend-infra               - Frontend infrastructure"
+echo ""
+echo "Template-specific aliases:"
+echo "  ht-backend-docs                 - Document backend source code"
+echo "  ht-backend-security             - Security analysis of full backend"
+echo "  ht-backend-performance          - Performance analysis of source"
+echo "  ht-backend-refactor             - Refactoring suggestions for libs"
+echo "  ht-backend-claude               - Claude XML format for CQRS"
+echo "  ht-backend-cleanup              - Code cleanup for source"
 echo ""
 echo "Reload your shell or run: source $SHELL_CONFIG" 

@@ -10,6 +10,9 @@ if [ -z "$1" ]; then
     echo "  $0 ccode2prompt <project_name> [context] [--timestamp] [--template=template_name]"
     echo "  $0 listprojects - показать доступные проекты"
     echo "  $0 listcontexts <project_name> - показать доступные контексты для проекта"
+    echo "  $0 listtemplates - показать доступные шаблоны"
+    echo "  $0 templateinfo <template_name> - информация о шаблоне"
+    echo "  $0 smarttemplate <project_name> <context> <template> - умный выбор шаблона с рекомендациями"
     exit 1
 fi
 
@@ -153,6 +156,91 @@ except:
 "
 }
 
+# Helper: list available templates
+list_templates() {
+    read_config
+    echo "Доступные шаблоны:"
+    python3 -c "
+import json
+with open('$CONFIG_FILE', 'r') as f:
+    config = json.load(f)
+templates = config['global_settings']['templates']
+template_contexts = config['global_settings'].get('template_contexts', {})
+for template_name, template_file in templates.items():
+    if template_name in template_contexts:
+        description = template_contexts[template_name]['description']
+        print(f'  - {template_name}: {description}')
+    else:
+        print(f'  - {template_name}: {template_file}')
+"
+}
+
+# Helper: get template info
+get_template_info() {
+    local template_name="$1"
+    read_config
+    echo "Информация о шаблоне '$template_name':"
+    python3 -c "
+import json
+import sys
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = json.load(f)
+    templates = config['global_settings']['templates']
+    template_contexts = config['global_settings'].get('template_contexts', {})
+    
+    if '$template_name' not in templates:
+        print('Шаблон не найден')
+        sys.exit(1)
+    
+    template_file = templates['$template_name']
+    print(f'Файл шаблона: {template_file}')
+    
+    if '$template_name' in template_contexts:
+        context = template_contexts['$template_name']
+        print(f'Описание: {context[\"description\"]}')
+        print(f'Лучше всего подходит для: {\", \".join(context[\"best_for\"])}')
+        print(f'Суффикс выходного файла: {context[\"output_suffix\"]}')
+    else:
+        print('Дополнительная информация недоступна')
+except KeyError as e:
+    print(f'Ошибка конфигурации: {e}')
+    sys.exit(1)
+"
+}
+
+# Helper: smart template recommendation
+smart_template_recommendation() {
+    local project_name="$1"
+    local context_name="$2"
+    local template_name="$3"
+    read_config
+    python3 -c "
+import json
+import sys
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = json.load(f)
+    
+    template_contexts = config['global_settings'].get('template_contexts', {})
+    
+    if '$template_name' in template_contexts:
+        template_info = template_contexts['$template_name']
+        best_for = template_info['best_for']
+        
+        if '$context_name' in best_for:
+            print('✅ ОТЛИЧНЫЙ ВЫБОР: Этот шаблон идеально подходит для данного контекста')
+        else:
+            print('⚠️  ПРЕДУПРЕЖДЕНИЕ: Этот шаблон может не подходить для данного контекста')
+            print(f'Рекомендуемые контексты: {\", \".join(best_for)}')
+    else:
+        print('ℹ️  Информация о совместимости недоступна')
+        
+except Exception as e:
+    print(f'Ошибка: {e}')
+"
+}
+
 if [ "$COMMAND" = "listprojects" ]; then
     list_projects
     exit 0
@@ -164,6 +252,36 @@ elif [ "$COMMAND" = "listcontexts" ]; then
         exit 1
     fi
     list_contexts "${ARGS[1]}"
+    exit 0
+
+elif [ "$COMMAND" = "listtemplates" ]; then
+    list_templates
+    exit 0
+
+elif [ "$COMMAND" = "templateinfo" ]; then
+    if [ -z "${ARGS[1]}" ]; then
+        echo "Ошибка: Необходимо указать имя шаблона."
+        echo "Использование: $0 templateinfo <template_name>"
+        echo ""
+        list_templates
+        exit 1
+    fi
+    get_template_info "${ARGS[1]}"
+    exit 0
+
+elif [ "$COMMAND" = "smarttemplate" ]; then
+    if [ -z "${ARGS[1]}" ] || [ -z "${ARGS[2]}" ] || [ -z "${ARGS[3]}" ]; then
+        echo "Ошибка: Необходимо указать проект, контекст и шаблон."
+        echo "Использование: $0 smarttemplate <project_name> <context> <template>"
+        echo ""
+        echo "Доступные проекты:"
+        list_projects
+        echo ""
+        echo "Доступные шаблоны:"
+        list_templates
+        exit 1
+    fi
+    smart_template_recommendation "${ARGS[1]}" "${ARGS[2]}" "${ARGS[3]}"
     exit 0
 
 elif [ "$COMMAND" = "ccode2prompt" ]; then
@@ -204,10 +322,29 @@ elif [ "$COMMAND" = "ccode2prompt" ]; then
 
     IFS='|' read -r INCLUDE_PATTERNS EXCLUDE_PATTERNS <<< "$PATTERNS"
 
-    # Setup output
+    # Setup output with template suffix
     OUTPUT_DIR="$STATIC_DIR/code2prompt/"
     mkdir -p "$OUTPUT_DIR"
-    OUTPUT_FILE="$OUTPUT_DIR$(get_output_name "cc2p_${PROJECT_NAME}_${CONTEXT_NAME}" "txt")"
+    
+    # Get template suffix if using template
+    TEMPLATE_SUFFIX=""
+    if [ -n "$TEMPLATE_FLAG" ]; then
+        TEMPLATE_SUFFIX=$(python3 -c "
+import json
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = json.load(f)
+    template_contexts = config['global_settings'].get('template_contexts', {})
+    if '$TEMPLATE_FLAG' in template_contexts:
+        print(template_contexts['$TEMPLATE_FLAG']['output_suffix'])
+    else:
+        print('_${TEMPLATE_FLAG}')
+except:
+    print('_${TEMPLATE_FLAG}')
+")
+    fi
+    
+    OUTPUT_FILE="$OUTPUT_DIR$(get_output_name "cc2p_${PROJECT_NAME}_${CONTEXT_NAME}${TEMPLATE_SUFFIX}" "txt")"
 
     # Build code2prompt command
     CMD_ARGS=("$PROJECT_PATH" "--tokens" "--output" "$OUTPUT_FILE")
@@ -224,6 +361,11 @@ elif [ "$COMMAND" = "ccode2prompt" ]; then
     if [ -n "$TEMPLATE_FLAG" ]; then
         TEMPLATE_PATH=$(get_template_path "$TEMPLATE_FLAG")
         CMD_ARGS+=("--template" "$TEMPLATE_PATH")
+        
+        # Show smart recommendation
+        echo "=== АНАЛИЗ ШАБЛОНА ==="
+        smart_template_recommendation "$PROJECT_NAME" "$CONTEXT_NAME" "$TEMPLATE_FLAG"
+        echo ""
     fi
 
     echo "Выполняется: code2prompt ${CMD_ARGS[*]}"
@@ -232,6 +374,9 @@ elif [ "$COMMAND" = "ccode2prompt" ]; then
     echo "Путь: $PROJECT_PATH"
     echo "Include: $INCLUDE_PATTERNS"
     echo "Exclude: $EXCLUDE_PATTERNS"
+    if [ -n "$TEMPLATE_FLAG" ]; then
+        echo "Шаблон: $TEMPLATE_FLAG ($TEMPLATE_PATH)"
+    fi
     
     # Execute code2prompt
     code2prompt "${CMD_ARGS[@]}"

@@ -182,7 +182,52 @@
       "*.temp"
     ],
     "templates": {
-      "note": "Templates are custom Handlebars files - create your own or use code2prompt without templates"
+      "document": "automations/code2prompt/templates/document-the-code.hbs",
+      "security": "automations/code2prompt/templates/find-security-vulnerabilities.hbs", 
+      "cleanup": "automations/code2prompt/templates/clean-up-code.hbs",
+      "claude": "automations/code2prompt/templates/claude-xml.hbs",
+      "pr": "automations/code2prompt/templates/write-github-pull-request.hbs",
+      "commit": "automations/code2prompt/templates/write-git-commit.hbs",
+      "bugs": "automations/code2prompt/templates/fix-bugs.hbs",
+      "readme": "automations/code2prompt/templates/write-github-readme.hbs",
+      "performance": "automations/code2prompt/templates/improve-performance.hbs",
+      "refactor": "automations/code2prompt/templates/refactor.hbs",
+      "ctf-binary": "automations/code2prompt/templates/binary-exploitation-ctf-solver.hbs",
+      "ctf-crypto": "automations/code2prompt/templates/cryptography-ctf-solver.hbs",
+      "ctf-reverse": "automations/code2prompt/templates/reverse-engineering-ctf-solver.hbs",
+      "ctf-web": "automations/code2prompt/templates/web-ctf-solver.hbs"
+    },
+    "template_contexts": {
+      "document": {
+        "description": "Add comprehensive documentation to all public functions and classes",
+        "best_for": ["source", "libs", "cqrs", "integration-events"],
+        "output_suffix": "_documented"
+      },
+      "security": {
+        "description": "Comprehensive security vulnerability analysis",
+        "best_for": ["full", "source", "infrastructure"],
+        "output_suffix": "_security_analysis"
+      },
+      "cleanup": {
+        "description": "Code quality improvements and cleanup",
+        "best_for": ["source", "libs"],
+        "output_suffix": "_cleaned"
+      },
+      "claude": {
+        "description": "Claude-optimized XML format for better AI processing",
+        "best_for": ["source", "libs", "cqrs"],
+        "output_suffix": "_claude_xml"
+      },
+      "performance": {
+        "description": "Performance optimization analysis and suggestions",
+        "best_for": ["source", "libs", "full"],
+        "output_suffix": "_performance_analysis"
+      },
+      "refactor": {
+        "description": "Code refactoring suggestions following SOLID principles",
+        "best_for": ["source", "libs"],
+        "output_suffix": "_refactor_suggestions"
+      }
     }
   }
 }
