@@ -89,27 +89,14 @@
           "description": "Code quality, validation, and checking tools configuration",
           "trim_tree": true,
           "include_patterns": [
-            ".github/workflows/*.yml",
-            ".github/workflows/*.yaml",
-            ".commitlintrc.yml",
-            ".commitlintrc.js",
-            "renovate.json",
             "package.json",
+            "renovate.json",
             "README.md",
-            "lefthook.yml",
-            ".yarnrc",
-            ".eslintrc.js",
-            ".eslintrc.json",
-            ".gitignore",
-            ".dockerignore",
             "docker-compose.yaml",
-            "Dockerfile",
-            "Dockerfile.dev",
             "tsconfig.base.json",
             "tsconfig.json",
-            "jest.config.js",
-            ".nvmrc",
-            ".commitlintrc.json"
+            ".gitignore",
+            ".dockerignore"
           ],
           "exclude_patterns": [
             "node_modules/**",
@@ -119,7 +106,9 @@
             ".git/**",
             "libs/**",
             "apps/**",
-            "src/**"
+            "src/**",
+            "test/**",
+            "tests/**"
           ]
         },
         "full": {
