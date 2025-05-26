@@ -91,12 +91,26 @@
           "include_patterns": [
             "package.json",
             "renovate.json",
-            "README.md",
-            "docker-compose.yaml",
             "tsconfig.base.json",
-            "tsconfig.json",
+            "docker-compose.yaml",
+            "lefthook.yml",
+            ".commitlintrc.yml",
+            ".eslintrc",
             ".gitignore",
-            ".dockerignore"
+            ".yarnrc",
+            ".dockerignore",
+            "README.md",
+            ".lefthook/**/*",
+            ".github/**/*.yml",
+            ".github/**/*.yaml",
+            "scripts/**/*",
+            "apps/**/tsconfig*.json",
+            "apps/**/package.json",
+            "libs/**/tsconfig*.json",
+            "libs/**/package.json",
+            "libs/**/jest.config*",
+            "libs/**/ampli.json",
+            "libs/**/.commitlintrc.js"
           ],
           "exclude_patterns": [
             "node_modules/**",
@@ -104,11 +118,8 @@
             "coverage/**",
             "*.log",
             ".git/**",
-            "libs/**",
-            "apps/**",
-            "src/**",
-            "test/**",
-            "tests/**"
+            "_context/**",
+            "localhost-variables.*"
           ]
         },
         "full": {

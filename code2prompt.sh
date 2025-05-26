@@ -180,29 +180,38 @@ trim_project_tree() {
     local file_path="$1"
     local temp_file="${file_path}.tmp"
     
-    # Ищем конец дерева проекта (последняя строка с символами дерева)
-    local last_tree_line=$(grep -n "^[[:space:]]*[│├└]" "$file_path" | tail -1 | cut -d: -f1)
+    # Ищем начало содержимого файлов (строка с путем к файлу, начинающаяся с `)
+    local first_file_line=$(grep -n "^\`.*\`:" "$file_path" | head -1 | cut -d: -f1)
     
-    if [[ -n "$last_tree_line" ]]; then
-        # Добавляем несколько строк после последней строки дерева для безопасности
-        local cut_line=$((last_tree_line + 3))
-        
-        # Создаём новый файл без дерева
+    if [[ -n "$first_file_line" ]]; then
+        # Создаём компактное дерево только из включённых файлов
         {
             echo "Project Path: $(basename "$(dirname "$file_path")" | sed 's/cc2p_//' | sed 's/_quality-control//')"
             echo ""
-            echo "Quality Control Files Analysis"
-            echo "============================="
+            echo "Quality Control Files Tree"
+            echo "========================="
             echo ""
             
-            # Берём всё после дерева
-            tail -n +$cut_line "$file_path"
+            # Извлекаем пути файлов из содержимого и очищаем их
+            grep "^\`.*\`:" "$file_path" | sed 's/^\`\(.*\)\`:.*$/\1/' | sed 's|/private/var/folders/.*/tmp\.[^/]*/||g' | sort | while read -r filepath; do
+                echo "├── $filepath"
+            done
+            
+            echo ""
+            echo "File Contents"
+            echo "============="
+            echo ""
+            
+            # Берём всё начиная с первого файла
+            tail -n +$first_file_line "$file_path"
         } > "$temp_file"
         
         # Заменяем оригинальный файл
         mv "$temp_file" "$file_path"
         
-        echo "🌳 Дерево проекта обрезано для компактности"
+        echo "🌳 Дерево проекта заменено на компактный список включённых файлов"
+    else
+        echo "⚠️  Содержимое файлов не найдено - дерево не обрезано"
     fi
 }
 
@@ -377,40 +386,68 @@ except:
     
     OUTPUT_FILE="$OUTPUT_DIR$(get_output_name "cc2p_${PROJECT_NAME}_${CONTEXT_NAME}${TEMPLATE_SUFFIX}" "txt")"
 
-    # Build code2prompt command
-    CMD_ARGS=("$PROJECT_PATH" "--tokens" "--output" "$OUTPUT_FILE")
-    
-    if [ -n "$INCLUDE_PATTERNS" ]; then
-        CMD_ARGS+=("--include" "$INCLUDE_PATTERNS")
-    fi
-    
-    if [ -n "$EXCLUDE_PATTERNS" ]; then
-        CMD_ARGS+=("--exclude" "$EXCLUDE_PATTERNS")
-    fi
-
-    # Add template if specified
-    if [ -n "$TEMPLATE_FLAG" ]; then
-        TEMPLATE_PATH=$(get_template_path "$TEMPLATE_FLAG")
-        CMD_ARGS+=("--template" "$TEMPLATE_PATH")
+    # Special handling for quality-control context
+    if [ "$CONTEXT_NAME" = "quality-control" ]; then
+        echo "=== СПЕЦИАЛЬНЫЙ РЕЖИМ: QUALITY CONTROL ==="
+        echo "Проект: $PROJECT_NAME"
+        echo "Контекст: $CONTEXT_NAME"
+        echo "Путь: $PROJECT_PATH"
         
-        # Show smart recommendation
-        echo "=== АНАЛИЗ ШАБЛОНА ==="
-        smart_template_recommendation "$PROJECT_NAME" "$CONTEXT_NAME" "$TEMPLATE_FLAG"
-        echo ""
-    fi
+        # Add template if specified
+        if [ -n "$TEMPLATE_FLAG" ]; then
+            TEMPLATE_PATH=$(get_template_path "$TEMPLATE_FLAG")
+            echo "Шаблон: $TEMPLATE_FLAG ($TEMPLATE_PATH)"
+            
+            # Show smart recommendation
+            echo "=== АНАЛИЗ ШАБЛОНА ==="
+            smart_template_recommendation "$PROJECT_NAME" "$CONTEXT_NAME" "$TEMPLATE_FLAG"
+            echo ""
+        fi
+        
+        # Use special quality control extractor
+        EXTRACTOR_SCRIPT="$CURRENT_DIR/automations/code2prompt/quality_control_extractor.sh"
+        if [ -f "$EXTRACTOR_SCRIPT" ]; then
+            "$EXTRACTOR_SCRIPT" "$PROJECT_PATH" "$OUTPUT_FILE" "$CONFIG_FILE"
+        else
+            echo "Ошибка: Скрипт экстрактора не найден: $EXTRACTOR_SCRIPT"
+            exit 1
+        fi
+    else
+        # Build code2prompt command for other contexts
+        CMD_ARGS=("$PROJECT_PATH" "--tokens" "--output" "$OUTPUT_FILE")
+        
+        if [ -n "$INCLUDE_PATTERNS" ]; then
+            CMD_ARGS+=("--include" "$INCLUDE_PATTERNS")
+        fi
+        
+        if [ -n "$EXCLUDE_PATTERNS" ]; then
+            CMD_ARGS+=("--exclude" "$EXCLUDE_PATTERNS")
+        fi
 
-    echo "Выполняется: code2prompt ${CMD_ARGS[*]}"
-    echo "Проект: $PROJECT_NAME"
-    echo "Контекст: $CONTEXT_NAME"
-    echo "Путь: $PROJECT_PATH"
-    echo "Include: $INCLUDE_PATTERNS"
-    echo "Exclude: $EXCLUDE_PATTERNS"
-    if [ -n "$TEMPLATE_FLAG" ]; then
-        echo "Шаблон: $TEMPLATE_FLAG ($TEMPLATE_PATH)"
+        # Add template if specified
+        if [ -n "$TEMPLATE_FLAG" ]; then
+            TEMPLATE_PATH=$(get_template_path "$TEMPLATE_FLAG")
+            CMD_ARGS+=("--template" "$TEMPLATE_PATH")
+            
+            # Show smart recommendation
+            echo "=== АНАЛИЗ ШАБЛОНА ==="
+            smart_template_recommendation "$PROJECT_NAME" "$CONTEXT_NAME" "$TEMPLATE_FLAG"
+            echo ""
+        fi
+
+        echo "Выполняется: code2prompt ${CMD_ARGS[*]}"
+        echo "Проект: $PROJECT_NAME"
+        echo "Контекст: $CONTEXT_NAME"
+        echo "Путь: $PROJECT_PATH"
+        echo "Include: $INCLUDE_PATTERNS"
+        echo "Exclude: $EXCLUDE_PATTERNS"
+        if [ -n "$TEMPLATE_FLAG" ]; then
+            echo "Шаблон: $TEMPLATE_FLAG ($TEMPLATE_PATH)"
+        fi
+        
+        # Execute code2prompt
+        code2prompt "${CMD_ARGS[@]}"
     fi
-    
-    # Execute code2prompt
-    code2prompt "${CMD_ARGS[@]}"
 
     if [ -f "$OUTPUT_FILE" ]; then
         # Check if context has trim_tree flag
