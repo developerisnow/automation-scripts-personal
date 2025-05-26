@@ -68,20 +68,49 @@ if [ -d ".github" ]; then
     done
 fi
 
-# scripts папка
-if [ -d "scripts" ]; then
-    cp -r "scripts" "$TEMP_DIR/"
-    echo "✓ scripts/"
-fi
+# Обрабатываем остальные паттерны из конфигурации
+python3 -c "
+import json
+import sys
+import os
+import glob
+import shutil
 
-# tsconfig файлы из apps и libs (исключая node_modules)
-find apps libs -path "*/node_modules" -prune -o -name "tsconfig*.json" -print -o -name "package.json" -print -o -name "jest.config*" -print -o -name "ampli.json" -print -o -name ".commitlintrc.js" -print 2>/dev/null | while read -r file; do
-    if [ -f "$file" ]; then
-        mkdir -p "$TEMP_DIR/$(dirname "$file")"
-        cp "$file" "$TEMP_DIR/$file"
-        echo "✓ $file"
-    fi
-done
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = json.load(f)
+    
+    patterns = config['projects']['hypetrain-backend']['contexts']['quality-control']['include_patterns']
+    
+    for pattern in patterns:
+        # Пропускаем корневые файлы (уже обработаны)
+        if '/' not in pattern and '*' not in pattern:
+            continue
+        if pattern.startswith('.') and '/' not in pattern and '*' not in pattern:
+            continue
+            
+        # Обрабатываем паттерны с путями
+        if pattern.endswith('/**/*'):
+            # Папки целиком
+            dir_path = pattern.replace('/**/*', '')
+            if os.path.isdir(dir_path):
+                dest_path = os.path.join('$TEMP_DIR', dir_path)
+                os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+                shutil.copytree(dir_path, dest_path, dirs_exist_ok=True)
+                print(f'✓ {dir_path}/')
+        else:
+            # Файлы по паттернам
+            for file_path in glob.glob(pattern, recursive=True):
+                if os.path.isfile(file_path):
+                    dest_file = os.path.join('$TEMP_DIR', file_path)
+                    os.makedirs(os.path.dirname(dest_file), exist_ok=True)
+                    shutil.copy2(file_path, dest_file)
+                    print(f'✓ {file_path}')
+
+except Exception as e:
+    print(f'Error: {e}', file=sys.stderr)
+    sys.exit(1)
+"
 
 echo ""
 echo "Файлы скопированы в: $TEMP_DIR"
