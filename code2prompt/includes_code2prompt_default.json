@@ -87,31 +87,29 @@
         },
         "quality-control": {
           "description": "Code quality, validation, and checking tools configuration",
+          "trim_tree": true,
           "include_patterns": [
-            ".lefthook/**/*",
-            ".github/**/*.yml",
-            ".github/**/*.yaml",
+            ".github/workflows/*.yml",
+            ".github/workflows/*.yaml",
             ".commitlintrc.yml",
             ".commitlintrc.js",
-            "env_aggregation.txt",
-            "garden.yml",
             "renovate.json",
             "package.json",
             "README.md",
             "lefthook.yml",
             ".yarnrc",
-            ".eslintrc*",
+            ".eslintrc.js",
+            ".eslintrc.json",
             ".gitignore",
             ".dockerignore",
             "docker-compose.yaml",
-            "scripts/**/*",
-            "Dockerfile*",
-            "**/tsconfig.json",
-            "**/tsconfig.*.json",
-            "**/ampli.json",
-            "**/jest.config*",
-            "**/.nvmrc",
-            "**/.commitlintrc.*"
+            "Dockerfile",
+            "Dockerfile.dev",
+            "tsconfig.base.json",
+            "tsconfig.json",
+            "jest.config.js",
+            ".nvmrc",
+            ".commitlintrc.json"
           ],
           "exclude_patterns": [
             "node_modules/**",
@@ -119,9 +117,9 @@
             "coverage/**",
             "*.log",
             ".git/**",
-            "scripts/node_modules/**",
-            "**/*.spec.ts",
-            "**/*.test.ts"
+            "libs/**",
+            "apps/**",
+            "src/**"
           ]
         },
         "full": {

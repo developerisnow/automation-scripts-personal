@@ -175,6 +175,37 @@ for template_name, template_file in templates.items():
 "
 }
 
+# Функция для обрезки дерева проекта из файла
+trim_project_tree() {
+    local file_path="$1"
+    local temp_file="${file_path}.tmp"
+    
+    # Ищем конец дерева проекта (последняя строка с символами дерева)
+    local last_tree_line=$(grep -n "^[[:space:]]*[│├└]" "$file_path" | tail -1 | cut -d: -f1)
+    
+    if [[ -n "$last_tree_line" ]]; then
+        # Добавляем несколько строк после последней строки дерева для безопасности
+        local cut_line=$((last_tree_line + 3))
+        
+        # Создаём новый файл без дерева
+        {
+            echo "Project Path: $(basename "$(dirname "$file_path")" | sed 's/cc2p_//' | sed 's/_quality-control//')"
+            echo ""
+            echo "Quality Control Files Analysis"
+            echo "============================="
+            echo ""
+            
+            # Берём всё после дерева
+            tail -n +$cut_line "$file_path"
+        } > "$temp_file"
+        
+        # Заменяем оригинальный файл
+        mv "$temp_file" "$file_path"
+        
+        echo "🌳 Дерево проекта обрезано для компактности"
+    fi
+}
+
 # Helper: get template info
 get_template_info() {
     local template_name="$1"
@@ -382,6 +413,27 @@ except:
     code2prompt "${CMD_ARGS[@]}"
 
     if [ -f "$OUTPUT_FILE" ]; then
+        # Check if context has trim_tree flag
+        TRIM_TREE=$(python3 -c "
+import json
+try:
+    with open('$CONFIG_FILE', 'r') as f:
+        config = json.load(f)
+    projects = config['projects']
+    if '$PROJECT_NAME' in projects and '$CONTEXT_NAME' in projects['$PROJECT_NAME']['contexts']:
+        context = projects['$PROJECT_NAME']['contexts']['$CONTEXT_NAME']
+        print(context.get('trim_tree', False))
+    else:
+        print(False)
+except:
+    print(False)
+")
+        
+        # Trim tree if flag is set
+        if [ "$TRIM_TREE" = "True" ]; then
+            trim_project_tree "$OUTPUT_FILE"
+        fi
+        
         FILE_SIZE=$(du -h "$OUTPUT_FILE" | cut -f1)
         echo "Файл успешно сохранён: $OUTPUT_FILE"
         echo "Размер файла: $FILE_SIZE"
