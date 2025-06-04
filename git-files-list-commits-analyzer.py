@@ -158,64 +158,114 @@ def get_output_filename(commit1, commit2):
 if __name__ == "__main__":
     validate_git_repo()
     
-    parser = argparse.ArgumentParser(description='Analyze git repository changes between commits.')
+    parser = argparse.ArgumentParser(
+        description='Analyze git repository changes between commits.',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+EXAMPLES:
+
+  # Compare two specific commits:
+  %(prog)s abc1234 def5678
+
+  # Compare two branches (note: use comma, no spaces!):
+  %(prog)s --branches main,develop
+  %(prog)s --branches feature/auth,main
+
+  # Analyze last 5 commits:
+  %(prog)s --lastcommits 5
+
+  # With filtering (exclude md/json files, hidden files, test folders):
+  %(prog)s --lastcommits 3 --typesexclude="md,json" --exclude-hidden --foldersexclude="test,logs"
+
+  # Only show specific change types (A=added, M=modified):
+  %(prog)s --lastcommits 2 --typeschanges="AM"
+
+YOUR ALIASES:
+  analysegit abc1234 def5678                     # Basic comparison
+  analysegit-last 5                             # Last 5 commits  
+  analysegit-branches main,develop               # Compare branches
+  analysegit-filtered --lastcommits 3           # With smart filtering
+
+NOTES:
+  - For --branches use format: branch1,branch2 (comma, no spaces!)
+  - Script saves report to docs/meta/ and copies filenames to clipboard
+  - Change types: A=Added, M=Modified, R=Renamed, C=Copied, D=Deleted
+        ''')
     
     # Create mutually exclusive group for different analysis modes
-    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group = parser.add_mutually_exclusive_group(required=False)
     mode_group.add_argument('--branches', 
-                          help='Compare two branches (format: branch1,branch2)')
+                          help='Compare two branches (format: branch1,branch2 - use comma, NO spaces!)')
     mode_group.add_argument('--lastcommits', type=int,
-                          help='Analyze last N commits')
+                          help='Analyze last N commits from HEAD')
     mode_group.add_argument('commits', nargs='*',
                           help='Two commit hashes to compare', default=[])
     
     # Add filtering options
     parser.add_argument('--typesexclude', default='', 
-                       help='Comma-separated list of file extensions to exclude (e.g., "md,csv,log,json,yaml")')
+                       help='Comma-separated file extensions to exclude (e.g., "md,csv,log,json,yaml")')
     parser.add_argument('--typeschanges', default='AMRCD', 
-                       help='Git diff filter types (default: AMRCD)')
+                       help='Git diff filter types: A=Added, M=Modified, R=Renamed, C=Copied, D=Deleted (default: AMRCD)')
     parser.add_argument('--foldersexclude', default='',
-                       help='Comma-separated list of folders to exclude (e.g., "logs,test")')
+                       help='Comma-separated folders to exclude (e.g., "logs,test,node_modules")')
     parser.add_argument('--exclude-hidden', action='store_true',
                        help='Exclude hidden files (starting with ".")')
 
-    args = parser.parse_args()
+    try:
+        args = parser.parse_args()
+    except SystemExit:
+        # If argument parsing fails, show help and examples
+        print("\n🔥 ОШИБКА В АРГУМЕНТАХ! Вот как правильно использовать:\n")
+        parser.print_help()
+        sys.exit(1)
     
-    # Get commit range based on input mode
-    if args.branches:
-        commit1, commit2 = get_commit_range(args)
-    elif args.lastcommits:
-        commit1, commit2 = get_commit_range(args)
-    else:
-        if len(args.commits) != 2:
-            parser.error("Please provide either --branches, --lastcommits N, or two commit hashes")
-        commit1, commit2 = args.commits
+    # If no arguments provided, show help and exit
+    if not args.branches and not args.lastcommits and not args.commits:
+        parser.print_help()
+        sys.exit(0)
     
-    excluded_extensions = [ext.strip() for ext in args.typesexclude.split(',')] if args.typesexclude else None
-    excluded_folders = [folder.strip() for folder in args.foldersexclude.split(',')] if args.foldersexclude else None
-    
-    # Generate the report file
-    report = generate_report(commit1, commit2, args.typeschanges, 
-                           excluded_extensions, excluded_folders, args.exclude_hidden)
-    
-    output_dir = "docs/meta"
-    output_file = f"{output_dir}/{get_output_filename(commit1, commit2)}"
-    
-    os.makedirs(output_dir, exist_ok=True)
-    with open(output_file, 'w') as f:
-        f.write(report)
-    
-    print(f"Report generated successfully at: {output_file}")
-    
-    # Always extract added and modified files, prefix them with '@', and copy to clipboard.
-    changes = get_file_changes(commit1, commit2, args.typeschanges, excluded_extensions, excluded_folders, args.exclude_hidden)
-    files_to_copy = []
-    for status in ('A', 'M'):
-        for filepath in changes.get(status, []):
-            files_to_copy.append("@" + os.path.basename(filepath))
-    clipboard_output = "\n".join(files_to_copy)
-    if clipboard_output:
-        subprocess.run("pbcopy", input=clipboard_output, text=True, shell=True)
-        print("File list copied to clipboard!")
-    else:
-        print("No added or modified files found to copy!")
+    try:
+        # Get commit range based on input mode
+        if args.branches:
+            commit1, commit2 = get_commit_range(args)
+        elif args.lastcommits:
+            commit1, commit2 = get_commit_range(args)
+        else:
+            if len(args.commits) != 2:
+                parser.error("Please provide either --branches, --lastcommits N, or two commit hashes")
+            commit1, commit2 = args.commits
+        
+        excluded_extensions = [ext.strip() for ext in args.typesexclude.split(',')] if args.typesexclude else None
+        excluded_folders = [folder.strip() for folder in args.foldersexclude.split(',')] if args.foldersexclude else None
+        
+        # Generate the report file
+        report = generate_report(commit1, commit2, args.typeschanges, 
+                               excluded_extensions, excluded_folders, args.exclude_hidden)
+        
+        output_dir = "docs/meta"
+        output_file = f"{output_dir}/{get_output_filename(commit1, commit2)}"
+        
+        os.makedirs(output_dir, exist_ok=True)
+        with open(output_file, 'w') as f:
+            f.write(report)
+        
+        print(f"Report generated successfully at: {output_file}")
+        
+        # Always extract added and modified files, prefix them with '@', and copy to clipboard.
+        changes = get_file_changes(commit1, commit2, args.typeschanges, excluded_extensions, excluded_folders, args.exclude_hidden)
+        files_to_copy = []
+        for status in ('A', 'M'):
+            for filepath in changes.get(status, []):
+                files_to_copy.append("@" + os.path.basename(filepath))
+        clipboard_output = "\n".join(files_to_copy)
+        if clipboard_output:
+            subprocess.run("pbcopy", input=clipboard_output, text=True, shell=True)
+            print("File list copied to clipboard!")
+        else:
+            print("No added or modified files found to copy!")
+            
+    except Exception as e:
+        print(f"\n🔥 ОШИБКА: {e}")
+        print("\n💡 Вот как правильно использовать скрипт:\n")
+        parser.print_help()
+        sys.exit(1)

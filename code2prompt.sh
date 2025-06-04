@@ -16,10 +16,11 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-# Сохраняем текущую директорию
+# Сохраняем текущую директорию и путь к скрипту
 CURRENT_DIR=$(pwd)
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 STATIC_DIR="/Users/user/____Sandruk/___PKM/temp"
-CONFIG_FILE="$CURRENT_DIR/automations/code2prompt/includes_code2prompt_default.json"
+CONFIG_FILE="$SCRIPT_DIR/code2prompt/includes_code2prompt_default.json"
 echo "Текущая директория: $CURRENT_DIR"
 
 # Parse arguments for flags
@@ -405,7 +406,7 @@ except:
         fi
         
         # Use special quality control extractor
-        EXTRACTOR_SCRIPT="$CURRENT_DIR/automations/code2prompt/quality_control_extractor.sh"
+        EXTRACTOR_SCRIPT="$SCRIPT_DIR/code2prompt/quality_control_extractor.sh"
         if [ -f "$EXTRACTOR_SCRIPT" ]; then
             "$EXTRACTOR_SCRIPT" "$PROJECT_PATH" "$OUTPUT_FILE" "$CONFIG_FILE"
         else

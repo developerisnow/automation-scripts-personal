@@ -12,7 +12,10 @@ import argparse
 import subprocess
 from typing import List, Tuple, Optional, Dict, Set
 from datetime import datetime
-import pyperclip
+try:
+    import pyperclip
+except ImportError:
+    pyperclip = None
 import time
 
 class ObsidianLinkCollector:
@@ -763,11 +766,14 @@ def main():
         
         # Copy to clipboard if requested
         if args.clipboard:
-            try:
-                pyperclip.copy(result)
-                print("Content copied to clipboard!")
-            except Exception as e:
-                print(f"Error copying to clipboard: {str(e)}")
+            if pyperclip:
+                try:
+                    pyperclip.copy(result)
+                    print("Content copied to clipboard!")
+                except Exception as e:
+                    print(f"Error copying to clipboard: {str(e)} (pyperclip module might have issues)")
+            else:
+                print("pyperclip module not found. Cannot copy to clipboard. Please install it (e.g., pip install pyperclip for the correct Python environment).")
         
     except Exception as e:
         print(f"Error processing file: {str(e)}")

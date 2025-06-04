@@ -1,0 +1,38 @@
+# Code2Prompt Basic Aliases
+# Основные команды для работы с code2prompt
+
+# Экспорт основных путей
+export CODE2PROMPT_SCRIPT_PATH="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh"
+
+# Основные команды
+alias c2p='$CODE2PROMPT_SCRIPT_PATH'
+alias ccode2prompt='$CODE2PROMPT_SCRIPT_PATH ccode2prompt'
+alias treecode2prompt='$CODE2PROMPT_SCRIPT_PATH treecode2prompt'
+alias bcode2prompt='$CODE2PROMPT_SCRIPT_PATH bcode2prompt'
+
+# Команды управления
+alias c2p-projects='$CODE2PROMPT_SCRIPT_PATH listprojects'
+alias c2p-contexts='$CODE2PROMPT_SCRIPT_PATH listcontexts'
+alias c2p-templates='$CODE2PROMPT_SCRIPT_PATH listtemplates'
+alias c2p-template-info='$CODE2PROMPT_SCRIPT_PATH templateinfo'
+alias c2p-smart='$CODE2PROMPT_SCRIPT_PATH smarttemplate'
+
+# Функции помощи
+c2pHelp() {
+    echo "🔧 Code2Prompt Basic Commands:"
+    echo ""
+    echo "📋 Main commands:"
+    echo "  c2p <folder>                    - Basic code2prompt"
+    echo "  ccode2prompt <project> [context] - Config-based code2prompt"
+    echo "  treecode2prompt <folder>        - Tree structure generation"
+    echo "  bcode2prompt <file>             - Batch processing"
+    echo ""
+    echo "🔍 Management commands:"
+    echo "  c2p-projects                    - List available projects"
+    echo "  c2p-contexts <project>          - List contexts for project"
+    echo "  c2p-templates                   - List available templates"
+    echo "  c2p-template-info <template>    - Get template information"
+    echo "  c2p-smart <project> <context> <template> - Smart template recommendation"
+    echo ""
+    echo "🎯 For HypeTrain specific commands, use: hc2pHelp"
+} 

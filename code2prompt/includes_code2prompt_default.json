@@ -103,7 +103,6 @@
             ".yarnrc",
             ".dockerignore",
             "README.md",
-            "env_aggregation.txt",
             ".lefthook/**/*",
             ".github/**/*.yml",
             ".github/**/*.yaml"
@@ -127,6 +126,211 @@
             "**/*.yaml",
             "**/*.yml",
             "**/*.md"
+          ],
+          "exclude_patterns": [
+            "node_modules/**",
+            "dist/**",
+            "coverage/**",
+            "*.log",
+            ".git/**"
+          ]
+        },
+        "app-api": {
+          "description": "HypeTrain API app only",
+          "include_patterns": [
+            "apps/hypetrain-api/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-billing": {
+          "description": "HypeTrain Billing Service only",
+          "include_patterns": [
+            "apps/hypetrain-billing-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-contracting": {
+          "description": "HypeTrain Contracting Service only",
+          "include_patterns": [
+            "apps/hypetrain-contracting-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-exploration": {
+          "description": "HypeTrain Exploration Service only",
+          "include_patterns": [
+            "apps/hypetrain-exploration-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-external-api": {
+          "description": "HypeTrain External API Service only",
+          "include_patterns": [
+            "apps/hypetrain-external-api-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-message-processing": {
+          "description": "HypeTrain Message Processing Service only",
+          "include_patterns": [
+            "apps/hypetrain-message-processing-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-migration-runner": {
+          "description": "HypeTrain Migration Runner only",
+          "include_patterns": [
+            "apps/hypetrain-migration-runner/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-notification": {
+          "description": "HypeTrain Notification Service only",
+          "include_patterns": [
+            "apps/hypetrain-notification-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-scheduler": {
+          "description": "HypeTrain Scheduler Service only",
+          "include_patterns": [
+            "apps/hypetrain-scheduler-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-search": {
+          "description": "HypeTrain Search Service only",
+          "include_patterns": [
+            "apps/hypetrain-search-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "app-storage": {
+          "description": "HypeTrain Storage Service only",
+          "include_patterns": [
+            "apps/hypetrain-storage-service/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "lib-analytics": {
+          "description": "Analytics library only",
+          "include_patterns": [
+            "libs/analytics/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "lib-ht-logger": {
+          "description": "HT Logger library only",
+          "include_patterns": [
+            "libs/ht-logger/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "lib-common": {
+          "description": "Common library only",
+          "include_patterns": [
+            "libs/hypetrain-common/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "lib-shared": {
+          "description": "Shared library only",
+          "include_patterns": [
+            "libs/shared/**/*.ts"
+          ],
+          "exclude_patterns": [
+            "**/*.spec.ts",
+            "**/*.test.ts",
+            "node_modules/**",
+            "dist/**"
+          ]
+        },
+        "infra-detailed": {
+          "description": "Detailed infrastructure view with YAML preprocessing",
+          "yaml_preprocessing": true,
+          "file_size_analysis": true,
+          "include_patterns": [
+            "README.md",
+            "TECH_DESC.md", 
+            "TECH_REQ.md",
+            "garden.yml",
+            "docker-compose.yaml",
+            "apps/*/Dockerfile*",
+            "apps/*/dockerignore*",
+            "apps/*/garden/*.yml",
+            "apps/*/test/docker-compose.test.yaml",
+            ".github/workflows/*.yml",
+            "scripts/**/*"
           ],
           "exclude_patterns": [
             "node_modules/**",

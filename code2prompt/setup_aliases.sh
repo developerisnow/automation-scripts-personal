@@ -1,96 +1,182 @@
 #!/bin/bash
 
-# Setup aliases for code2prompt automation
-# Run this script to add aliases to your shell configuration
+# Code2Prompt Aliases Setup
+# Добавляет алиасы в shell конфигурационные файлы
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CODE2PROMPT_SCRIPT="$SCRIPT_DIR/../code2prompt.sh"
+ALIASES_CONTENT="$SCRIPT_DIR/aliases.txt"
+HYPETRAIN_ALIASES_GENERATOR="$SCRIPT_DIR/generate_aliases.sh"
 
-# Detect shell
-if [[ "$SHELL" == *"zsh"* ]]; then
-    SHELL_CONFIG="$HOME/.zshrc"
-elif [[ "$SHELL" == *"bash"* ]]; then
-    SHELL_CONFIG="$HOME/.bashrc"
-else
-    echo "Unsupported shell: $SHELL"
-    exit 1
-fi
+# Функции для определения shell
+get_shell_config_file() {
+    case $SHELL in
+        */zsh)
+            echo "$HOME/.zshrc"
+            ;;
+        */bash)
+            echo "$HOME/.bashrc"
+            ;;
+        */fish)
+            echo "$HOME/.config/fish/config.fish"
+            ;;
+        *)
+            echo "$HOME/.profile"
+            ;;
+    esac
+}
 
-echo "Setting up code2prompt aliases in $SHELL_CONFIG"
+# Основная функция установки
+install_aliases() {
+    local config_file=$(get_shell_config_file)
+    
+    echo "🔧 Setting up Code2Prompt aliases..."
+    echo "Shell: $SHELL"
+    echo "Config file: $config_file"
+    echo ""
+    
+    # Создаём резервную копию
+    if [ -f "$config_file" ]; then
+        cp "$config_file" "${config_file}.backup.$(date +%Y%m%d_%H%M%S)"
+        echo "✅ Backup created: ${config_file}.backup.$(date +%Y%m%d_%H%M%S)"
+    fi
+    
+    # Удаляем старые aliases если есть
+    if grep -q "# Code2Prompt Aliases" "$config_file" 2>/dev/null; then
+        echo "🧹 Removing old aliases..."
+        sed -i.bak '/# Code2Prompt Aliases/,/# End Code2Prompt Aliases/d' "$config_file"
+    fi
+    
+    # Добавляем новые aliases
+    echo "" >> "$config_file"
+    echo "# Code2Prompt Aliases" >> "$config_file"
+    echo "# Auto-generated - do not edit manually" >> "$config_file"
+    echo "" >> "$config_file"
+    
+    # Генерируем и добавляем основные алиасы
+    if [ -f "$ALIASES_CONTENT" ]; then
+        cat "$ALIASES_CONTENT" >> "$config_file"
+        echo "✅ Basic aliases added from $ALIASES_CONTENT"
+    fi
+    
+    echo "" >> "$config_file"
+    echo "# HypeTrain specific aliases" >> "$config_file"
+    
+    # Генерируем и добавляем HypeTrain алиасы
+    if [ -x "$HYPETRAIN_ALIASES_GENERATOR" ]; then
+        "$HYPETRAIN_ALIASES_GENERATOR" >> "$config_file"
+        echo "✅ HypeTrain aliases generated and added"
+    else
+        echo "⚠️  HypeTrain aliases generator not found or not executable"
+    fi
+    
+    echo "" >> "$config_file"
+    echo "# End Code2Prompt Aliases" >> "$config_file"
+    
+    echo ""
+    echo "✅ Aliases successfully installed to $config_file"
+    echo ""
+    echo "🔄 To reload aliases, run:"
+    echo "   source $config_file"
+    echo ""
+    echo "📋 Available aliases:"
+    echo "   c2p, ccode2prompt  - Main commands"
+    echo "   hc2pHelp          - HypeTrain aliases help"
+    echo "   hc2pQualityControl - Quality control context"
+    echo "   hc2pSource        - Source code context"
+    echo "   hc2pAllApps       - All applications"
+    echo "   hc2pAllLibs       - All libraries"
+    echo "   ...and many more (run hc2pHelp for full list)"
+}
 
-# Create aliases
-cat >> "$SHELL_CONFIG" << 'EOF'
+# Функция удаления
+uninstall_aliases() {
+    local config_file=$(get_shell_config_file)
+    
+    echo "🧹 Removing Code2Prompt aliases from $config_file..."
+    
+    if [ -f "$config_file" ] && grep -q "# Code2Prompt Aliases" "$config_file"; then
+        sed -i.bak '/# Code2Prompt Aliases/,/# End Code2Prompt Aliases/d' "$config_file"
+        echo "✅ Aliases removed successfully"
+        echo "🔄 Please reload your shell: source $config_file"
+    else
+        echo "ℹ️  No aliases found to remove"
+    fi
+}
 
-# Code2Prompt Automation Aliases
-alias c2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh'
-alias cc2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh ccode2prompt'
-alias treec2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh treecode2prompt'
-alias bc2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh bcode2prompt'
+# Функция проверки
+check_aliases() {
+    local config_file=$(get_shell_config_file)
+    
+    echo "🔍 Checking Code2Prompt aliases status..."
+    echo "Config file: $config_file"
+    echo ""
+    
+    if [ -f "$config_file" ] && grep -q "# Code2Prompt Aliases" "$config_file"; then
+        echo "✅ Aliases are installed"
+        echo ""
+        echo "📋 Installed sections:"
+        grep -n "^# " "$config_file" | grep -A5 -B5 "Code2Prompt\|HypeTrain"
+    else
+        echo "❌ Aliases are not installed"
+        echo ""
+        echo "💡 Run './setup_aliases.sh install' to install them"
+    fi
+}
 
-# Quick project context aliases
-alias c2p-projects='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listprojects'
-alias c2p-contexts='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listcontexts'
-alias c2p-templates='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listtemplates'
-alias c2p-template-info='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh templateinfo'
-alias c2p-smart='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh smarttemplate'
+# Функция обновления
+update_aliases() {
+    echo "🔄 Updating Code2Prompt aliases..."
+    uninstall_aliases
+    sleep 1
+    install_aliases
+    echo "✅ Aliases updated successfully"
+}
 
-# Quick hypetrain contexts
-alias ht-backend-source='cc2p hypetrain-backend source'
-alias ht-backend-libs='cc2p hypetrain-backend libs'
-alias ht-backend-cqrs='cc2p hypetrain-backend cqrs'
-alias ht-backend-events='cc2p hypetrain-backend integration-events'
-alias ht-backend-infra='cc2p hypetrain-backend infrastructure'
-alias ht-backend-quality='cc2p hypetrain-backend quality-control'
-alias ht-backend-full='cc2p hypetrain-backend full'
+# Показать помощь
+show_help() {
+    echo "Code2Prompt Aliases Setup"
+    echo ""
+    echo "Usage: $0 [command]"
+    echo ""
+    echo "Commands:"
+    echo "  install    - Install aliases to shell config"
+    echo "  uninstall  - Remove aliases from shell config"
+    echo "  update     - Update existing aliases"
+    echo "  check      - Check if aliases are installed"
+    echo "  help       - Show this help"
+    echo ""
+    echo "Files:"
+    echo "  aliases.txt           - Basic aliases template"
+    echo "  generate_aliases.sh   - HypeTrain aliases generator"
+    echo ""
+    echo "Generated aliases include:"
+    echo "  • c2p, ccode2prompt - Main code2prompt commands"
+    echo "  • hc2p* - HypeTrain specific contexts"
+    echo "  • Aggregate functions for bulk generation"
+    echo "  • Template shortcuts for common use cases"
+}
 
-alias ht-frontend-source='cc2p hypetrain-frontend source'
-alias ht-frontend-components='cc2p hypetrain-frontend components'
-alias ht-frontend-infra='cc2p hypetrain-frontend infrastructure'
-
-# Template-specific aliases
-alias ht-backend-docs='cc2p hypetrain-backend source --template=document'
-alias ht-backend-security='cc2p hypetrain-backend full --template=security'
-alias ht-backend-performance='cc2p hypetrain-backend source --template=performance'
-alias ht-backend-refactor='cc2p hypetrain-backend libs --template=refactor'
-alias ht-backend-claude='cc2p hypetrain-backend cqrs --template=claude'
-alias ht-backend-cleanup='cc2p hypetrain-backend source --template=cleanup'
-alias ht-backend-quality-check='cc2p hypetrain-backend quality-control --template=security'
-
-EOF
-
-echo "Aliases added to $SHELL_CONFIG"
-echo ""
-echo "Available aliases:"
-echo "  c2p <folder>                    - Basic code2prompt"
-echo "  cc2p <project> [context]        - Config-based code2prompt"
-echo "  treec2p <folder>                - Tree structure generation"
-echo "  bc2p <file>                     - Batch processing"
-echo "  c2p-projects                    - List available projects"
-echo "  c2p-contexts <project>          - List contexts for project"
-echo "  c2p-templates                   - List available templates"
-echo "  c2p-template-info <template>    - Get template information"
-echo "  c2p-smart <project> <context> <template> - Smart template recommendation"
-echo ""
-echo "Quick project aliases:"
-echo "  ht-backend-source               - HypeTrain backend source code"
-echo "  ht-backend-libs                 - HypeTrain backend libraries"
-echo "  ht-backend-cqrs                 - CQRS library only"
-echo "  ht-backend-events               - Integration events only"
-echo "  ht-backend-infra                - Infrastructure files"
-echo "  ht-backend-quality              - Code quality & validation tools"
-echo "  ht-backend-full                 - Complete backend"
-echo ""
-echo "  ht-frontend-source              - Frontend source code"
-echo "  ht-frontend-components          - React components"
-echo "  ht-frontend-infra               - Frontend infrastructure"
-echo ""
-echo "Template-specific aliases:"
-echo "  ht-backend-docs                 - Document backend source code"
-echo "  ht-backend-security             - Security analysis of full backend"
-echo "  ht-backend-performance          - Performance analysis of source"
-echo "  ht-backend-refactor             - Refactoring suggestions for libs"
-echo "  ht-backend-claude               - Claude XML format for CQRS"
-echo "  ht-backend-cleanup              - Code cleanup for source"
-echo "  ht-backend-quality-check        - Security analysis of quality tools"
-echo ""
-echo "Reload your shell or run: source $SHELL_CONFIG" 
+# Главная логика
+case "${1:-install}" in
+    install)
+        install_aliases
+        ;;
+    uninstall|remove)
+        uninstall_aliases
+        ;;
+    update)
+        update_aliases
+        ;;
+    check|status)
+        check_aliases
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        echo "❌ Unknown command: $1"
+        echo ""
+        show_help
+        exit 1
+        ;;
+esac 
