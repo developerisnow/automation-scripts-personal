@@ -1,0 +1,95 @@
+#!/usr/bin/env zsh
+# 🚀 MINIMAL ZSHRC - Модульная структура для ADHD
+# ===============================================
+# Все настройки разделены по файлам в ~/.config/zsh/
+# Легко найти, легко изменить, легко понять!
+
+# 🏠 ZSH Base Directory
+export ZSH_CONFIG="$HOME/.config/zsh"
+
+# 📊 Debug mode (раскомментируй для отладки)
+# ZSH_DEBUG=1
+
+# Функция для безопасной загрузки файлов
+load_if_exists() {
+    [[ -f "$1" ]] && source "$1"
+}
+
+# 🌍 Environment Variables (первым делом!)
+# ----------------------------------------
+load_if_exists "$ZSH_CONFIG/env/paths.zsh"
+load_if_exists "$ZSH_CONFIG/env/vars.zsh"
+
+# ⚙️ ZSH Configuration
+# --------------------
+load_if_exists "$ZSH_CONFIG/config/history.zsh"
+load_if_exists "$ZSH_CONFIG/config/completion.zsh"
+load_if_exists "$ZSH_CONFIG/config/prompt.zsh"
+
+# 🛠️ Functions (до алиасов, т.к. алиасы могут их использовать)
+# ------------------------------------------------------------
+load_if_exists "$ZSH_CONFIG/functions/helpers.zsh"
+load_if_exists "$ZSH_CONFIG/functions/project.zsh"
+
+# 📝 Aliases (порядок важен!)
+# ---------------------------
+# 1. System aliases (базовые команды)
+load_if_exists "$ZSH_CONFIG/aliases/system.zsh"
+
+# 2. Navigation (cd, paths)
+load_if_exists "$ZSH_CONFIG/aliases/navigation.zsh"
+
+# 3. Git aliases
+load_if_exists "$ZSH_CONFIG/aliases/git.zsh"
+
+# 4. Docker aliases
+load_if_exists "$ZSH_CONFIG/aliases/docker.zsh"
+
+# 5. Development tools
+load_if_exists "$ZSH_CONFIG/aliases/tools.zsh"
+
+# 6. Project-specific
+load_if_exists "$ZSH_CONFIG/aliases/projects.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/obsidian.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/llms.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/crypto.zsh"
+
+# 7. Personal/Custom aliases (последними, чтобы переопределить если нужно)
+load_if_exists "$ZSH_CONFIG/aliases/personal.zsh"
+
+# 🔌 External Tools
+# -----------------
+# Starship prompt
+if command -v starship &> /dev/null; then
+    eval "$(starship init zsh)"
+fi
+
+# Zoxide (better cd)
+if command -v zoxide &> /dev/null; then
+    eval "$(zoxide init zsh)"
+fi
+
+# Direnv
+if command -v direnv &> /dev/null; then
+    eval "$(direnv hook zsh)"
+fi
+
+# NVM (Node Version Manager)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+
+# 🎯 Quick Info (для ADHD - сразу видно что загружено)
+# ----------------------------------------------------
+if [[ -n "$ZSH_DEBUG" ]]; then
+    echo "✅ ZSH Config loaded from: $ZSH_CONFIG"
+    echo "📊 Aliases loaded: $(alias | wc -l) total"
+    echo "🛠️  Functions loaded: $(declare -f | grep -c '^[a-zA-Z_]')"
+fi
+
+# 🔥 Quick reload alias (всегда под рукой)
+alias reload='source ~/.zshrc && echo "✅ ZSH config reloaded!"'
+alias zshrc='${EDITOR:-code} ~/.zshrc'
+alias zshconf='cd ~/.config/zsh && ${EDITOR:-code} .'
+
+# 📍 Последняя строка - показать где мы находимся
+# pwd
