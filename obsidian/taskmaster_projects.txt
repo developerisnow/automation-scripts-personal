@@ -1,0 +1,8 @@
+# TaskMaster Projects for Auto-Sync
+# One project path per line, comments starting with #
+
+/Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden
+
+# Add more projects as needed:
+# /Users/user/__Repositories/AnotherProject/repo
+# /Users/user/__Repositories/MyProject/backend 
