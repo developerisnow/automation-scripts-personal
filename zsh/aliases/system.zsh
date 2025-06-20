@@ -120,7 +120,7 @@ alias week='date +%V'  # Номер недели
 # 🔄 Process management
 # ---------------------
 alias psg='ps aux | grep -v grep | grep -i -e VSZ -e'  # Поиск процессов
-alias killport='lsof -ti:$1 | xargs kill -9'  # Убить процесс на порту
+# killport теперь функция в tools.zsh
 
 # 📋 Clipboard (macOS)
 # --------------------

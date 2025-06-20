@@ -1,11 +1,11 @@
 #!/usr/bin/env zsh
 # 🚀 MINIMAL ZSHRC - Модульная структура для ADHD
 # ===============================================
-# Все настройки разделены по файлам в ~/.config/zsh/
+# Все настройки разделены по файлам в $ZSH_CONFIG
 # Легко найти, легко изменить, легко понять!
 
 # 🏠 ZSH Base Directory
-export ZSH_CONFIG="$HOME/.config/zsh"
+export ZSH_CONFIG="$HOME/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh"
 
 # 📊 Debug mode (раскомментируй для отладки)
 # ZSH_DEBUG=1
@@ -28,8 +28,8 @@ load_if_exists "$ZSH_CONFIG/config/prompt.zsh"
 
 # 🛠️ Functions (до алиасов, т.к. алиасы могут их использовать)
 # ------------------------------------------------------------
-load_if_exists "$ZSH_CONFIG/functions/helpers.zsh"
-load_if_exists "$ZSH_CONFIG/functions/project.zsh"
+load_if_exists "$ZSH_CONFIG/functions/archive.zsh"
+load_if_exists "$ZSH_CONFIG/functions/functions.zsh"
 
 # 📝 Aliases (порядок важен!)
 # ---------------------------
@@ -39,18 +39,30 @@ load_if_exists "$ZSH_CONFIG/aliases/system.zsh"
 # 2. Navigation (cd, paths)
 load_if_exists "$ZSH_CONFIG/aliases/navigation.zsh"
 
-# 3. Git aliases
-load_if_exists "$ZSH_CONFIG/aliases/git.zsh"
+# 3. Development tools
+load_if_exists "$ZSH_CONFIG/aliases/tool-git.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-git-my.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-docker.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-ssh.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-code2prompt.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-cursor.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-obsidian.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-taskmaster.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-tree.zsh"
 
-# 4. Docker aliases
-load_if_exists "$ZSH_CONFIG/aliases/docker.zsh"
+# 4. Language-specific tools
+load_if_exists "$ZSH_CONFIG/aliases/tools-node.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tools-python.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tools-rust.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tools-golang.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tools.zsh"  # General tools
 
-# 5. Development tools
-load_if_exists "$ZSH_CONFIG/aliases/tools.zsh"
+# 5. Project-specific
+load_if_exists "$ZSH_CONFIG/aliases/project-hypetrain.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/project-airpg.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/project-assistant-telegram.zsh"
 
-# 6. Project-specific
-load_if_exists "$ZSH_CONFIG/aliases/projects.zsh"
-load_if_exists "$ZSH_CONFIG/aliases/obsidian.zsh"
+# 6. Category aliases
 load_if_exists "$ZSH_CONFIG/aliases/llms.zsh"
 load_if_exists "$ZSH_CONFIG/aliases/crypto.zsh"
 
@@ -89,7 +101,7 @@ fi
 # 🔥 Quick reload alias (всегда под рукой)
 alias reload='source ~/.zshrc && echo "✅ ZSH config reloaded!"'
 alias zshrc='${EDITOR:-code} ~/.zshrc'
-alias zshconf='cd ~/.config/zsh && ${EDITOR:-code} .'
+alias zshconf='cd ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh && ${EDITOR:-code} .'
 
 # 📍 Последняя строка - показать где мы находимся
 # pwd

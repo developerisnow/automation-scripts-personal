@@ -146,3 +146,37 @@ greposize() {
 alias gsave='git add -A && git commit -m "Quick save" && git push'
 
 # WIP commit
+alias gwip='git add -A && git commit -m "WIP: Work in progress"'
+
+# Sync with upstream
+alias gsync='git fetch upstream && git merge upstream/main'
+
+# === Migrated from old .zshrc ===
+alias gitc='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_commit_push.sh'
+alias gitdoc='git add docs .cursor package.json && git commit -m "docs" --no-verify'
+alias gitsrc='git add docs src package.json && git commit -m "[WIP]src folder updates" --no-verify'
+alias gittest='git add docs test package.json && git commit -m "[WIP] tests" --no-verify'
+alias gitall='git add . && git commit -m "update" --no-verify'
+alias gitstatus='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_status_with_modified.sh'
+alias gitp='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_push.sh'
+alias gitcurs='git add CLAUDE.md .claude AGENTS.md .specstory .cursor .taskmaster .gitignore .cursorignore .cursorindexingignore HypeTrain/docs-hypetrain-alex/ && git commit -m "chore(docs)"'
+alias githf='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitflow_hotfix.sh'
+alias githf2='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitflow_hotfix2.sh'
+alias gitmy='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/script_git_workflow.sh'
+alias gitcom='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_commit.sh'
+alias gittag='git tag --sort=-creatordate | head -n 2'
+alias gitfe='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitflow_feature.sh'
+alias gitre='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitflow_release.sh'
+alias gitdiff='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_diff_files_and_content.sh'
+alias gitpulls='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitpull.py'
+alias greprpg='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/grep_airpg.sh'
+alias git2txtl='git2txt --local'
+alias gardendev='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden-fix && pwd && git status && git log -1 && gh run list --workflow=garden.yml --repo infludb-inc/hypetrain-garden --limit=3 && gh workflow run garden.yml --ref fix/garden -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=debug -f env-type=dev -f force_rebuild=true'
+alias gardenstage='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden-fix && pwd && git status && git log -1 && gh run list --workflow=garden-dev.yml --repo infludb-inc/hypetrain-garden --limit=3 && gh workflow run garden-stage.yml --ref fix/garden -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=stage-debug1 -f load_production_data=true -f clean_database=true -f pgadmin=true'
+alias gardendevstage='gardendev && gardenstage'
+alias gitignoreAggregate='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor/gitignoreAggregation.py $@'
+
+alias analysegit='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py'
+alias analysegit-filtered='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --typesexclude="md,json" --exclude-hidden --foldersexclude="test,logs"'
+alias analysegit-last='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --lastcommits'
+alias analysegit-branches='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --branches'

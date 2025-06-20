@@ -1,7 +1,4 @@
 #!/usr/bin/env zsh
-# 🚂 PROJECT ALIASES - Быстрый доступ к проектам и их командам
-# ============================================================
-
 # 🎮 HypeTrain Project
 # -------------------
 # hdocsw = hypetrain docs watch (следит за изменениями в документации)
@@ -22,54 +19,13 @@ alias hgarden='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-ga
 alias gardendev='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden-fix && pwd && git status && git log -1 && gh run list --workflow=garden.yml --repo infludb-inc/hypetrain-garden --limit=3 && gh workflow run garden.yml --ref fix/garden -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=debug -f env-type=dev -f force_rebuild=true'
 alias gardenstage='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden-fix && pwd && git status && git log -1 && gh run list --workflow=garden-dev.yml --repo infludb-inc/hypetrain-garden --limit=3 && gh workflow run garden-stage.yml --ref fix/garden -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=stage-debug1 -f load_production_data=true -f clean_database=true -f pgadmin=true'
 alias gardendevstage='gardendev && gardenstage'
+# alias devgardenGem='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden && gh workflow run garden.yml --ref fix/garden -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=debug'
+# alias stagegardenGem='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden && gh workflow run garden-stage.yml --ref stage -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=stage-debug1 -f load_production_data=true -f clean_database=true'
 
-# 🤖 AirPG Project (AI RPG)
-# ------------------------
-alias airpg='cd /Users/user/__Repositories/LLMs-airpg__belbix'
-alias airpg-master='cd /Users/user/__Repositories/LLMs-airpg__belbix-master'
-alias airpg-w6='cd /Users/user/__Repositories/LLMs-airpg__belbix-master-week6-1'
+# 📋 Templates
+# ------------
+alias cpgitignore='cp /Users/user/____Sandruk/___PARA/__Projects/_templates/_Template_Project0/.gitignore ./ && echo "Copied .gitignore from Template_Project0 to current directory"'
 
-# 📋 TaskMaster
-# -------------
-alias tm='cd /Users/user/__Repositories/claude-task-master'
-alias taskmaster='cd /Users/user/__Repositories/llm-claude-task-master__by_eyaltoledano'
-
-# 🔮 Obsidian Projects
-# --------------------
-# o2p = obsidian to prompt
-# o2pd = obsidian to prompt with date
-# ac2p = all code to prompt (использует code2prompt)
-
-# Navigation
-alias obs-tasks='cd /Users/user/__Repositories/obsidian-tasks'
-alias obs-tg='cd /Users/user/__Repositories/obsidian-telegram-sync__soberhacker'
-
-# 🤖 LLMs Projects Quick Access
-# -----------------------------
-alias llms='cd /Users/user/__Repositories && ls -la | grep LLMs'  # Показать все LLMs проекты
-alias aider='cd /Users/user/__Repositories/LLMs-aider'
-alias cline='cd /Users/user/__Repositories/LLMs-Cline__Cline'
-alias roo='cd /Users/user/__Repositories/LLMs-Roo-Cline__RooVetGit'
-
-# 📱 Telegram Projects
-# --------------------
-alias tg-mcp='cd /Users/user/__Repositories/tg-mcp-assistant-telegram-crm__developerisnow'
-alias tg-scrapper='cd /Users/user/__Repositories/tg-scrapper__developerisnow'
-alias tgc='cd /Users/user/__Repositories/Assistant-Telegram-nestjs && pnpm start:prod'
-alias tgp='cd /Users/user/__Repositories/Assistant-Telegram-nestjs && pnpm start:studio'
-
-# 🔍 Search & Analysis Tools
-# --------------------------
-alias s2p='/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/search2prompt.sh "$@"'
-alias curs2p='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/CursorRulesMemorybankTasks2Prompt.sh'
-alias promptextract='cd /Users/user/____Sandruk/___PKM && python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/prompts_extractor.py'
-
-# 📊 TypeScript Mapping
-# ---------------------
-alias tsmap='python3 ~/bin/tsmap'
-
-# === Migrated from old .zshrc (HypeTrain specific) ===
-alias rpgdocs='cd /Users/user/__Repositories/LLMs-airpg__belbix && pwd && git branch && git status && git add docs && git commit -m \"docs\"'
 
 # HypeTrain code2prompt commands
 alias ht-backend-source='cc2p hypetrain-backend source'
@@ -93,10 +49,10 @@ alias ht-backend-claude='cc2p hypetrain-backend cqrs --template=claude'
 alias ht-backend-cleanup='cc2p hypetrain-backend source --template=cleanup'
 alias ht-backend-quality-check='cc2p hypetrain-backend quality-control --template=security'
 
-# TaskMaster symlinks
-alias tasksymlinks="python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/taskmaster_symlinks_enhanced.py"
-alias tasksymlinks-watch="python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/taskmaster_symlinks_enhanced.py --watch /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/taskmaster_projects.txt"
-alias tasksymlinks-start="launchctl load ~/Library/LaunchAgents/com.user.taskmaster-symlinks.plist"
-alias tasksymlinks-stop="launchctl unload ~/Library/LaunchAgents/com.user.taskmaster-symlinks.plist"
-alias tasksymlinks-status="launchctl list | grep taskmaster-symlinks"
-alias tasksymlinks-logs="tail -f /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/logs/taskmaster-symlinks.log"
+# Source HypeTrain specific aliases and functions
+HT_PROMPT_SCRIPT="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/HypeTrain2Promp.sh"
+if [ -f "$HT_PROMPT_SCRIPT" ]; then
+  source "$HT_PROMPT_SCRIPT"
+else
+  echo "Warning: HypeTrain prompt script not found: $HT_PROMPT_SCRIPT" >&2
+fi

@@ -168,8 +168,23 @@ export PATH="$HOME/.cargo/bin:$PATH"
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$HOME/.local/bin:$PATH"
 export OPENAI_API_KEY='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'
-export ANTHROPIC_API_KEY='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'
+#export OPENAI_API_KEY='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'
+#export OPENAI_API_KEY='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'
+#export OPENAI_API_KEY='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'
+# export OPENAI_API_KEY='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'
+## alexabook key3
+# export OPENAI_API_KEY='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'
+## alexabook1 newApi1
+# Contact@grplabs.com or jackstonedev@gmail.com api-key of Anthropic don't remember exactly
+# export ANTHROPIC_API_KEY='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'
+# Sergey Sadovnikov api-key of Anthropic
+# export ANTHROPIC_API_KEY='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'
+# Hypetrain aalexswww@hypetrain.io
+# Gemini API key annakult36389@gmail.com
 export GEMINI_API_KEY='AIzaSyAJ12T7aYqjuDk79QmI0Qbjw5_vYQ6C5Go'
+# Gemini API key aalexswww@gmail.com
+# export GEMINI_API_KEY='AIzaSyAc5p6BZ9-D9OzlxUetmtiO5k7p9FtWNSo'
+export ANTHROPIC_API_KEY='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'
 export DEEPSEEK_API_KEY='sk-19d4b9c3778b49248d679gi64bf9b1aa39'
 export PERPLEXITY_API_KEY='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'
 export HYPERBOLIC_DEEPSEEK_API_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqYWNrc3RvbmVkZXZAZ21haWwuY29tIiwiaWF0IjoxNzM2NjA4ODM1fQ.GDWJ_7sa9dwqRBKWi241gjh8UXPkLTwSkpkOz1eqDko'

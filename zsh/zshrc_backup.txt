@@ -1,0 +1,515 @@
+##### START PATH, other Globals #####
+# Path
+export PATH="/Users/user/bin:/Users/user/.local/bin:$PATH"
+
+# History
+HISTSIZE=10000000
+SAVEHIST=10000000
+HISTFILE=~/.zsh_history
+
+##### END PATH #####
+
+##### START NodeJS, NVMe, PNPM, etc. #####
+# NVMe
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# pnpm
+export PNPM_HOME="/Users/user/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+##### END NodeJS, NVMe, PNPM, etc. #####
+
+##### START Python #####
+# Load pyenv automatically by adding
+   # the following to ~/.bashrc or ~/.zshrc:
+export PATH="$HOME/.pyenv/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+# export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+# poetry
+export PATH="$HOME/.local/bin:$PATH"
+##### END Python #####
+
+##### START Google Cloud SDK #####
+# Google Cloud SDK.
+if [ -f '/Users/user/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/user/google-cloud-sdk/path.zsh.inc'; fi
+##### END Google Cloud SDK #####
+
+##### START ALIASES #####
+## Git
+alias gitc='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_commit_push.sh'
+alias gitdoc='git add docs .cursor package.json && git commit -m "docs" --no-verify'
+alias gitsrc='git add docs src package.json && git commit -m "[WIP]src folder updates" --no-verify'
+alias gittest='git add docs test package.json && git commit -m "[WIP] tests" --no-verify'
+alias gitall='git add . && git commit -m "update" --no-verify'
+alias ac2p='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh'
+alias bc2p='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh bcode2prompt'
+# Function to run code2prompt.sh with 'ts' parameter
+ac2pts() {
+    sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh "$1" ts
+}
+
+ac2ppy() {
+    sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh "$1" py
+}
+alias treec2p='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh treecode2prompt'
+alias c2p='code2prompt --tokens'
+alias gitstatus='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_status_with_modified.sh'
+alias gitp='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_push.sh'
+alias gitcurs='git add CLAUDE.md .claude AGENTS.md .specstory .cursor .taskmaster .gitignore .cursorignore .cursorindexingignore HypeTrain/docs-hypetrain-alex/ && git commit -m "chore(docs)"'
+alias githf='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitflow_hotfix.sh'
+alias githf2='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitflow_hotfix2.sh'
+alias gitmy='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/script_git_workflow.sh'
+alias gitcom='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_commit.sh'
+alias uzsh='source ~/.zshrc'
+alias gittag='git tag --sort=-creatordate | head -n 2'
+alias gitfe='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitflow_feature.sh'
+alias gitre='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitflow_release.sh'
+alias gitdiff='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_diff_files_and_content.sh'
+alias gitpulls='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/gitpull.py'
+alias rpgdocs='cd /Users/user/__Repositories/LLMs-airpg__belbix && pwd && git branch && git status && git add docs && git commit -m \"docs\"'
+alias greprpg='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/grep_airpg.sh'
+alias promptextract='cd /Users/user/____Sandruk/___PKM && python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/prompts_extractor.py'
+# Git analysis aliases
+alias analysegit='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py'
+alias analysegit-filtered='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --typesexclude="md,json" --exclude-hidden --foldersexclude="test,logs"'
+alias analysegit-last='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --lastcommits'
+alias analysegit-branches='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --branches'
+alias tasksymlinks='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/taskmaster_symlinks.py'
+alias tgc='cd /Users/user/__Repositories/Assistant -Telegram-nestjs && pnpm start:prod'
+alias tgp='cd /Users/user/__Repositories/Assistant-Telegram-nestjs && pnpm start:studio'
+## TypeScript Tools
+alias tsmap='python3 ~/bin/tsmap'
+
+lsmatch() {
+       ls | grep -i "$1" | awk '{print NR, $0}'
+   }
+   
+## Ssh, hosts
+alias sshgit='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/ssh_git.sh'
+alias sshmy='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/ssh_my.sh'
+alias rhost='sh read -p "Enter the IP address: " ip && sed -i '' "/$ip/d" /Users/user/.ssh/known_hosts'
+alias sshandrew='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/ssh_andrew.sh'
+
+alias a2yt="sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/media/mediactl_audio_video.sh -m cover"
+alias a2m4a="sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/media/mediactl_audio_video.sh -m audio"
+alias webm2mp4="sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/media/mediactl_audio_video.sh -m transcode"
+alias mediactl="sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/media/mediactl_audio_video.sh"
+compdef '_arguments "-i[Input file]:file:_files" "-o[Output]:file:_files" "-I[Cover image]:file:_files" "-v[Verbose]" "-m[Mode]:((cover audio transcode))"' a2yt a2m4a webm2mp4 mediactl
+## Voice to Text
+alias transcribe='node /Users/user/____Sandruk/__Vaults_Databases/__Repositories/LLMs-openai-cookbook/whisper/whisper-app-nodejs/index.js'
+alias replicateai='node /Users/user/____Sandruk/__Vaults_Databases/__Repositories/LLMs-openai-cookbook/whisper/whisper-app-nodejs/index.js replicateai'
+alias fasterWhisper='node /Users/user/____Sandruk/__Vaults_Databases/__Repositories/LLMs-openai-cookbook/whisper/whisper-app-nodejs/index.js fasterWhisper'
+
+## Python
+alias pythonVersions='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/pythonReviewSoftware.sh'
+alias pythonConfigsSearch='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/pythonLocalConfigsSearch.sh'
+
+## Cursor
+alias cpgitignore='cp /Users/user/____Sandruk/___PARA/__Projects/_templates/_Template_Project0/.gitignore ./ && echo "Copied .gitignore from Template_Project0 to current directory"'
+# alias cursorchats='cd /Users/user/____Sandruk/__Vaults_Databases/__Repositories/LLMs-cursor-chat-export/ && poetry run python chat.py export --output-dir "_outputs/tabs"'
+# alias cursor-export="cursor-chat export"
+# alias cursor-discover="cursor-chat discover"
+alias chatdev="bash $HOME/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor/start-dev.sh"
+# port
+alias chatprod="bash $HOME/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor/start-prod.sh"
+
+# Tree commands for directory structure
+alias treeFiles2='timestamp=$(date "+%Y-%m-%d_%H-%M") && tree -L 4 > "treeAllFiles_____Sandruk-${timestamp}.md" && tree -L 4 -if --noreport > "treeFiles_____Sandruk-${timestamp}.csv" && echo "Files saved: treeAllFiles_____Sandruk-${timestamp}.[md/csv]"'
+alias treeFiles='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/treeFilesEnchanced.sh'
+alias treeGitFiles='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/treeGitFilesEnchanced.sh'
+alias treeFolders='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/treeProjectsAndRootFolders.sh'
+alias treeStructure='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/treeFoldersStructure.sh'
+
+alias renameFolders='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/rename_folders.py'
+renamer() {
+    python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/renamer.py "$@"
+}
+### CD
+alias reposs='cd /Users/user/____Sandruk/__Vaults_Databases/__Repositories && pwd'
+alias devopss='cd /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS && pwd'
+alias recs='cd /Users/user/NextCloud2/__Vaults_Databases_nxtcld/__Recordings_nxtcld/__cloud-recordings/_huawei_recordings && pwd'
+alias projectss='cd /Users/user/____Sandruk/___PARA/__Projects && pwd'
+alias areass='cd /Users/user/____Sandruk/___PARA/__Areas && pwd' 
+alias systemm='cd /Users/user/____Sandruk/___PARA/__Areas/__7.2.SYSTEM-GROWTH-SECOND-BRAIN && pwd'
+alias resourcess='cd /Users/user/____Sandruk/___PARA/__Resources && pwd'
+alias archivess='cd /Users/user/____Sandruk/___PARA/__Archives && pwd'
+checkstat() {
+    bash /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/folder_stats.sh "$@"
+}
+# Proxy
+alias checkProxy='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/check_proxy.sh'
+## NodeJS
+##### END ALIASES ######
+alias ytsubs="node /Users/user/__Repositories/youtube-scrapping/youtube-captions-scraper/yt-subs.js"
+
+###### START API KEYS ######
+#export OPENAI_API_KEY='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'
+#export OPENAI_API_KEY='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'
+#export OPENAI_API_KEY='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'
+# export OPENAI_API_KEY='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'
+
+
+## alexabook key3
+# export OPENAI_API_KEY='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'
+## alexabook1 newApi1
+export OPENAI_API_KEY='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'
+# Contact@grplabs.com or jackstonedev@gmail.com api-key of Anthropic don't remember exactly
+# export ANTHROPIC_API_KEY='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'
+# Sergey Sadovnikov api-key of Anthropic
+# export ANTHROPIC_API_KEY='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'
+# Hypetrain aalexswww@hypetrain.io
+export ANTHROPIC_API_KEY='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'
+# Gemini API key annakult36389@gmail.com
+export GEMINI_API_KEY='AIzaSyAJ12T7aYqjuDk79QmI0Qbjw5_vYQ6C5Go'
+# Gemini API key aalexswww@gmail.com
+# export GEMINI_API_KEY='AIzaSyAc5p6BZ9-D9OzlxUetmtiO5k7p9FtWNSo'
+
+export DEEPSEEK_API_KEY='sk-19d4b9c3778b49248d679gi64bf9b1aa39'
+export PERPLEXITY_API_KEY='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'
+export HYPERBOLIC_DEEPSEEK_API_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJqYWNrc3RvbmVkZXZAZ21haWwuY29tIiwiaWF0IjoxNzM2NjA4ODM1fQ.GDWJ_7sa9dwqRBKWi241gjh8UXPkLTwSkpkOz1eqDko'
+export REPLICATE_API_TOKEN='r8_36H3VUB6GAj5PzxHOMU4DTGfWrRybVI4TVLYD'
+ # US account alekzswww@gmail.com
+# export OPENAI_API_KEY='sk-proj-a1bmOrEFeWEmj3VXvTyJT3BlbkFJq2fHEpHd1C2gJjiZiqMq'
+ # alex.abook1 main
+export SERPER_API_KEY='ef7e18fd3f62a1f37af0bad488aa0ad3f1ffe191'
+# Claude-API Cookie
+#export cookie='sessionKey=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; intercom-device-id-lupk8zyo=3ef50eda-6f66-4aea-a0fd-fa364671ba76; __cf_bm=xWU5vYAmNcactBVRpoeBHAewK5iUxPGF_WH1CnD4jkw-1692292336-0-ARf1tQJDiRuiGh7LEdbZXBnxpp1aYm3Li9pZrkz2GtY9teT3QBTS/okSLcltJl5bjII4E49uW99XFjdlpfZBaCY=; cf_clearance=BCPA4S37uhN0CXJIfilIu9BwJNwbWDLaQkePlm8OU5Q-1692292338-0-1-73a7bb46.99e3a2fe.24a6e4a6-0.2.1692292338; intercom-session-lupk8zyo=WnlnZDhVUnQyOVJqYXVvZzBaWWdPb2kyRWEyZ202dG1DKzhzUDNSbWZuOThURVU3TEZON0xaN09PQWRTLy9MSC0tM3d5QXFPTG8vRTArVmRnOC9Dd3UzQT09--729746706cf642fda9316e9edcd9f793ead4416c'
+export cookie='__cf_bm=2bpzdrBeBuB.aRac3yZ6B3tK2DZbYTO3veunI5Jmwzw-1692358287-0-AetIMxBE7zgUFvDn8BDdBVLg3o02zO6FKYIngnGpbhYBs1naexSavJ/hrqefYw4HTuOZi1ov4cWziH03Y8y73b8=; cf_clearance=Yp3Uq.A9exauy.yAwJ7ZolpKgcDPBC6YYLTIXaPsHj8-1692358288-0-1-d32615c.97def31e.5a333ebc-0.2.1692358288; sessionKey=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; intercom-device-id-lupk8zyo=e8003654-7913-4d47-869f-9d2923f832b5; intercom-session-lupk8zyo=TW1lS0ZyQkY4VXlyS05NcHJOaGwxazVheXplYytwSXk2VWhuaDROQ041RGtVcVl2bXBjdnFNK0ZjZnBlV2hiWC0tcmJ2ZEcxb3ZIRmtUaXVWdDRQWEx5dz09--672b812caf992d458ac3986a1aa1a16c38c97650'
+###### END API KEYS ######
+
+source <(tdl completion zsh)
+# alias 'tokens file'='tokens'
+alias tokens='wc -w'
+alias git2txtl='git2txt --local'
+# Added by Windsurf
+export PATH="/Users/user/.codeium/windsurf/bin:$PATH"
+
+# Added by Windsurf
+export PATH="/Users/user/.codeium/windsurf/bin:$PATH"
+
+# Added by LM Studio CLI (lms)
+export PATH="$PATH:/Users/user/.cache/lm-studio/bin"
+
+# GOPATH
+export PATH=$PATH:$(go env GOPATH)/bin
+
+export DEEPSEEK_API_KEY=sk-19d4b9c3778b49248d67964bf9b1aa39
+
+# Archive and logs management
+alias rmlogsXZ='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/archiveations_automations.sh rmlogsXZ'
+alias rmlogsZSTD='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/archiveations_automations.sh rmlogsZSTD'
+alias rmlogs='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/rmlogs.sh'
+alias fixt='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/rmlogs.sh fixt'
+
+# Archive functions
+xz() {
+    sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/archiveations_automations.sh xz "$1"
+}
+
+zstd() {
+    sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/archiveations_automations.sh zstd "$1"
+}
+
+# File content update automation
+alias addContentToFiles='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/updateFilesRecursively.py'
+
+# Archive functions
+alias backupairpg='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/archiveations_automations.sh backup /Users/user/__Repositories/LLMs-airpg__belbix'
+
+# Generic repo backup function
+backup_repo() {
+    sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/archiveations_automations.sh backup "$1"
+}
+
+# YouTube subtitle/video utilities
+alias yt='sh /Users/user/__Repositories/youtube-scrapping/youtube_channel_analyzer/scripts/alias-runner-yt-dlp.sh'
+
+##### START CRAWL4AI #####
+alias crawl4v0='python3 /Users/user/__Repositories/LLMs-crawl4ai__unclecode/scripts/crawl4ai_cli_v0_work.py'
+export CRAWL4AI_API_TOKEN=your_secret_token
+##### END CRAWL4AI #####
+
+##### START SCHEMA PROTECTION #####
+# Schema and migration file protection aliases
+alias protect-schemas='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor_protect-schema-files.sh lock schemas'
+alias protect-migrations='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor_protect-schema-files.sh lock migrations'
+alias protect-all='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor_protect-schema-files.sh lock all'
+alias unlock-schemas='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor_protect-schema-files.sh unlock schemas'
+alias unlock-migrations='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor_protect-schema-files.sh unlock migrations'
+alias unlock-all='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor_protect-schema-files.sh unlock all'
+alias verify-protected='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor_protect-schema-files.sh verify'
+alias monitor-protected='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor_monitor-protected-files.sh'
+alias obsort='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/obsidian_file_sorter.py --verbose'
+alias chatgptnorm='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/openai/filename-normalization-script.py --verbose'
+##### END SCHEMA PROTECTION #####
+
+#!/bin/bash
+##### START OBSIDIAN TO PROMPT #####
+# Default paths and settings
+export O2P_SCRIPT_PATH="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/obs2prompt_obsidian_to_prompt.py"
+export O2P_OUTPUT_DIR="/Users/user/____Sandruk/___PKM/temp"
+export OBSIDIAN_VAULT_PATH="/Users/user/____Sandruk/___PKM"
+# Create output directory if it doesn't exist
+[ ! -d "$O2P_OUTPUT_DIR" ] && mkdir -p "$O2P_OUTPUT_DIR"
+
+# Main o2p function
+function o2p {
+    local start_file="$1"
+    local depth="${2:-1}"
+    local debug_flag="${3:-}"
+
+    # Check if script exists
+    if [ ! -f "$O2P_SCRIPT_PATH" ]; then
+        echo "Error: Script not found at $O2P_SCRIPT_PATH"
+        return 1
+    fi
+
+    # Check if input file is provided
+    if [ -z "$start_file" ]; then
+        echo "Usage: o2p <filename> [depth] [debug]"
+        echo "Example: o2p 'my note.md' 2"
+        return 1
+    fi
+
+    # Execute python script
+    if [ -n "$debug_flag" ]; then
+        python3 "$O2P_SCRIPT_PATH" "$start_file" \
+            --vault "$OBSIDIAN_VAULT_PATH" \
+            --depth "$depth" \
+            --output "$O2P_OUTPUT_DIR/aggregate_${start_file%.md}.txt" \
+            --debug
+    else
+        python3 "$O2P_SCRIPT_PATH" "$start_file" \
+            --vault "$OBSIDIAN_VAULT_PATH" \
+            --depth "$depth" \
+            --output "$O2P_OUTPUT_DIR/aggregate_${start_file%.md}.txt"
+    fi
+}
+
+# Convenience functions - исправленный синтаксис
+function o2p1() { 
+    o2p "$1" 1
+}
+
+function o2p2() { 
+    o2p "$1" 2
+}
+
+function o2p3() { 
+    o2p "$1" 3
+}
+
+function o2pd() { 
+    o2p "$1" 1 "debug"
+}
+
+# Setup check function
+function o2p-check {
+    echo "Checking o2p setup..."
+    echo "Script path: $O2P_SCRIPT_PATH"
+    echo "Vault path: $OBSIDIAN_VAULT_PATH"
+    echo "Output directory: $O2P_OUTPUT_DIR"
+    
+    if [ -f "$O2P_SCRIPT_PATH" ]; then
+        echo "✅ Script exists"
+    else
+        echo "❌ Script not found"
+    fi
+    
+    if [ -d "$OBSIDIAN_VAULT_PATH" ]; then
+        echo "✅ Vault exists"
+    else
+        echo "❌ Vault not found"
+    fi
+    
+    if [ -d "$O2P_OUTPUT_DIR" ]; then
+        echo "✅ Output directory exists"
+    else
+        echo "❌ Output directory not found"
+    fi
+    
+    echo "Python environment:"
+    which python3 || echo "❌ Python3 not found"
+    python3 --version || echo "❌ Cannot get Python version"
+    
+    echo "Required packages:"
+    if python3 -c "import pyperclip" 2>/dev/null; then
+        echo "✅ pyperclip installed"
+    else
+        echo "❌ pyperclip not installed"
+    fi
+}
+##### END OBSIDIAN TO PROMPT #####
+
+# Remove leftovers of code2prompt txts
+alias rmtxt='echo "Files to be deleted:" && \
+find . -type f -name "aggregate*.txt" -exec basename {} \; && \
+echo "\nSummary:" && \
+total_size=$(find . -type f -name "aggregate*.txt" -exec stat -f %z {} \; | awk "{ sum += \$1 } END { printf \"%.2f\", sum/1024/1024 }") && \
+total_count=$(find . -type f -name "aggregate*.txt" | wc -l) && \
+echo "Total Files: $total_count" && \
+echo "Total Size: $total_size MB" && \
+find . -type f -name "aggregate*.txt" -delete && \
+echo "Deletion complete!"' 
+
+# File size listing commands
+# Top 20 largest files, respecting .gitignore and ignoring .git
+alias big20='fd --type f --hidden --exclude .git | xargs -I{} du -sk "{}" | sort -nr | head -20'
+# If fd is not available, fallback to git ls-files (works only in git repos)
+# File size listing commands (respects .gitignore, ignores .git)
+# Requires 'fd' (https://github.com/sharkdp/fd) or 'rg' (https://github.com/BurntSushi/ripgrep)
+alias big20git='git ls-files --others --cached --exclude-standard | xargs -I{} du -sk "{}" | sort -nr | head -20'
+# alias big20full='find . -type f -exec du -sk {} + | sort -nr | head -20'
+# alias big20fd='fd --type f --hidden --exclude .git | xargs -I{} du -sk "{}" | sort -nr | head -20'
+alias big20rg='rg --files --hidden --glob "!.git/*" | xargs -I{} du -sk "{}" | sort -nr | head -20'
+# alias big20='find . -type f -exec du -sk {} + | sort -nr | head -20'
+
+# Function to list large files with customizable count, excluding hidden paths
+# big() {
+#     local count=${1:-20}  # Default to 20 if no number provided
+#     find . -not -path '*/\.*' -type f -exec du -sk {} + | sort -nr | head -n "$count"
+# }
+# Customizable count
+big() {
+    local count=${1:-20}
+    fd --type f --hidden --exclude .git | xargs -I{} du -sk "{}" | sort -nr | head -n "$count"
+}
+
+
+# Function to list large files including hidden paths
+bighidden() {
+    local count=${1:-20}  # Default to 20 if no number provided
+    find . -type f -exec du -sk {} + | sort -nr | head -n "$count"
+}
+
+##### HYPETRAIN ALIASES #####
+alias hypetrain='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend'
+# alias devgardenGem='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden && gh workflow run garden.yml --ref fix/garden -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=debug'
+# alias stagegardenGem='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden && gh workflow run garden-stage.yml --ref stage -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=stage-debug1 -f load_production_data=true -f clean_database=true'
+alias gardendev='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden-fix && pwd && git status && git log -1 && gh run list --workflow=garden.yml --repo infludb-inc/hypetrain-garden --limit=3 && gh workflow run garden.yml --ref fix/garden -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=debug -f env-type=dev -f force_rebuild=true'
+alias gardenstage='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden-fix && pwd && git status && git log -1 && gh run list --workflow=garden-dev.yml --repo infludb-inc/hypetrain-garden --limit=3 && gh workflow run garden-stage.yml --ref fix/garden -f backend=feat/add-script-quotas-token/us/506-2467 -f frontend=story/1029 -f env-name=stage-debug1 -f load_production_data=true -f clean_database=true -f pgadmin=true'
+alias gardendevstage='gardendev && gardenstage'
+
+
+alias hdocsw='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs && uv run mkdocs serve'
+alias hdocsb='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs && uv run mkdocs build && wrangler pages deploy site --project-name hypetrain-docs --branch main'
+alias hgit='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs && pwd && git status &&  cd ../hypetrain-backend/ && pwd && git status && cd ../hypetrain-frontend && pwd && git status && cd ../hypetrain-garden && pwd && git status && cd ../hypetrain-devops-helm && pwd && git status && cd /Users/user/__Repositories/HypeTrain/ && pwd && git status'
+alias hgarden='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden && pwd && git status && git branch && git log -1 && gh run list --workflow=garden.yml --repo infludb-inc/hypetrain-garden --limit=5'
+
+# Source HypeTrain specific aliases and functions
+HT_PROMPT_SCRIPT="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/HypeTrain2Promp.sh"
+if [ -f "$HT_PROMPT_SCRIPT" ]; then
+  source "$HT_PROMPT_SCRIPT"
+else
+  echo "Warning: HypeTrain prompt script not found: $HT_PROMPT_SCRIPT" >&2
+fi
+
+# Quick hypetrain contexts
+alias ht-backend-source='cc2p hypetrain-backend source'
+alias ht-backend-libs='cc2p hypetrain-backend libs'
+alias ht-backend-cqrs='cc2p hypetrain-backend cqrs'
+alias ht-backend-events='cc2p hypetrain-backend integration-events'
+alias ht-backend-infra='cc2p hypetrain-backend infrastructure'
+alias ht-backend-full='cc2p hypetrain-backend full'
+
+alias ht-frontend-source='cc2p hypetrain-frontend source'
+alias ht-frontend-components='cc2p hypetrain-frontend components'
+alias ht-frontend-infra='cc2p hypetrain-frontend infrastructure'
+
+# Template-specific aliases
+alias ht-backend-docs='cc2p hypetrain-backend source --template=document'
+alias ht-backend-security='cc2p hypetrain-backend full --template=security'
+alias ht-backend-performance='cc2p hypetrain-backend source --template=performance'
+alias ht-backend-refactor='cc2p hypetrain-backend libs --template=refactor'
+alias ht-backend-claude='cc2p hypetrain-backend cqrs --template=claude'
+alias ht-backend-cleanup='cc2p hypetrain-backend source --template=cleanup'
+
+# Quick hypetrain contexts
+alias ht-backend-source='cc2p hypetrain-backend source'
+alias ht-backend-libs='cc2p hypetrain-backend libs'
+alias ht-backend-cqrs='cc2p hypetrain-backend cqrs'
+alias ht-backend-events='cc2p hypetrain-backend integration-events'
+alias ht-backend-infra='cc2p hypetrain-backend infrastructure'
+alias ht-backend-quality='cc2p hypetrain-backend quality-control'
+alias ht-backend-full='cc2p hypetrain-backend full'
+
+alias ht-frontend-source='cc2p hypetrain-frontend source'
+alias ht-frontend-components='cc2p hypetrain-frontend components'
+alias ht-frontend-infra='cc2p hypetrain-frontend infrastructure'
+
+# Template-specific aliases
+alias ht-backend-docs='cc2p hypetrain-backend source --template=document'
+alias ht-backend-security='cc2p hypetrain-backend full --template=security'
+alias ht-backend-performance='cc2p hypetrain-backend source --template=performance'
+alias ht-backend-refactor='cc2p hypetrain-backend libs --template=refactor'
+alias ht-backend-claude='cc2p hypetrain-backend cqrs --template=claude'
+alias ht-backend-cleanup='cc2p hypetrain-backend source --template=cleanup'
+alias ht-backend-quality-check='cc2p hypetrain-backend quality-control --template=security'
+
+##### END HYPETRAIN ALIASES #####
+
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/user/Programms/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/user/Programms/google-cloud-sdk/path.zsh.inc'; fi
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/user/Programms/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/user/Programms/google-cloud-sdk/completion.zsh.inc'; fi
+
+# search2prompt alias
+alias s2p='/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/search2prompt.sh "$@"'
+
+# Search alias for finding files by name (optional enhancement)
+alias findname='find . -name "*" -print | grep -i'
+
+# Alias for gitignore aggregation script
+alias gitignoreAggregate='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/cursor/gitignoreAggregation.py $@'
+
+# Task Master aliases added on 4/24/2025
+alias tm='task-master'
+alias taskmaster='task-master'
+alias curs2p='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/CursorRulesMemorybankTasks2Prompt.sh'
+
+# Quick project context aliases
+alias c2p-projects='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listprojects'
+alias c2p-contexts='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listcontexts'
+
+# Code2Prompt Automation Aliases
+alias c2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh'
+alias cc2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh ccode2prompt'
+alias treec2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh treecode2prompt'
+alias bc2p='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh bcode2prompt'
+
+# Quick project context aliases
+alias c2p-projects='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listprojects'
+alias c2p-contexts='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listcontexts'
+alias c2p-templates='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh listtemplates'
+alias c2p-template-info='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh templateinfo'
+alias c2p-smart='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/code2prompt.sh smarttemplate'
+
+alias toTranslate="python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/translations/translation_file.py"
+alias toTranslateHQ="python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/translations/translation_file_enhanced.py"
+
+# TaskMaster Symlinks Management
+alias tasksymlinks="python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/taskmaster_symlinks_enhanced.py"
+alias tasksymlinks-watch="python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/taskmaster_symlinks_enhanced.py --watch /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/obsidian/taskmaster_projects.txt"
+alias tasksymlinks-start="launchctl load ~/Library/LaunchAgents/com.user.taskmaster-symlinks.plist"
+alias tasksymlinks-stop="launchctl unload ~/Library/LaunchAgents/com.user.taskmaster-symlinks.plist"
+alias tasksymlinks-status="launchctl list | grep taskmaster-symlinks"
+alias tasksymlinks-logs="tail -f /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/logs/taskmaster-symlinks.log"
+# HypeTrain log error extractor alias
+alias logerror='/Users/user/__Repositories/HypeTrain/scripts/logerror.sh'
+alias logerror_here='logerror'
+export PATH="/opt/homebrew/bin:$PATH"
