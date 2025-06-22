@@ -56,3 +56,8 @@ if [ -f "$HT_PROMPT_SCRIPT" ]; then
 else
   echo "Warning: HypeTrain prompt script not found: $HT_PROMPT_SCRIPT" >&2
 fi
+
+# 📝 Logging
+# ----------
+alias logerror='/Users/user/__Repositories/HypeTrain/scripts/logerror.sh'
+alias logerror_here='logerror'

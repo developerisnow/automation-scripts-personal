@@ -43,9 +43,3 @@ alias mediactl="sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/auto
 # 🌐 Network & Proxy
 # ------------------
 alias checkProxy='bash ~/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/check_proxy.sh'
-
-
-# 📝 Logging
-# ----------
-alias logerror='/Users/user/__Repositories/HypeTrain/scripts/logerror.sh'
-alias logerror_here='logerror'

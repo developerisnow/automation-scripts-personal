@@ -58,3 +58,6 @@ zstyle ':completion:*:kill:*' force-list always
 zstyle ':completion:*:descriptions' format '%F{yellow}-- %d --%f'
 zstyle ':completion:*:messages' format '%F{purple} -- %d --%f'
 zstyle ':completion:*:warnings' format '%F{red}-- no matches found --%f'
+
+# bun completions
+[ -s "/Users/user/.bun/_bun" ] && source "/Users/user/.bun/_bun"

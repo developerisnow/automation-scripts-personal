@@ -20,6 +20,11 @@
 # Kubernetes tools
 export PATH="${KREW_ROOT:-$HOME/.krew}/bin:$PATH"
 
+# bun
+export BUN_INSTALL="$HOME/.bun"
+export PATH="$BUN_INSTALL/bin:$PATH"
+
+
 # Android SDK (если используешь)
 if [[ -d "$HOME/Library/Android/sdk" ]]; then
     export ANDROID_HOME="$HOME/Library/Android/sdk"
@@ -81,6 +86,18 @@ fi
 
 # Google Cloud
 [[ -d "$HOME/google-cloud-sdk/bin" ]] && export PATH="$HOME/google-cloud-sdk/bin:$PATH"
+# The next line updates PATH for the Google Cloud SDK.
+if [ -f '/Users/user/Programms/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/user/Programms/google-cloud-sdk/path.zsh.inc'; fi
+##### START Google Cloud SDK #####
+# Google Cloud SDK.
+if [ -f '/Users/user/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/user/google-cloud-sdk/path.zsh.inc'; fi
+##### END Google Cloud SDK #####
+
+# The next line enables shell command completion for gcloud.
+if [ -f '/Users/user/Programms/google-cloud-sdk/completion.zsh.inc' ]; then . '/Users/user/Programms/google-cloud-sdk/completion.zsh.inc'; fi
+
+# Homebrew
+[[ -d "/opt/homebrew/bin" ]] && export PATH="/opt/homebrew/bin:$PATH"
 
 # 📱 Mobile Development
 # ---------------------
@@ -116,3 +133,60 @@ pathadd() {
 # echo "📊 PATH entries count: $(echo $PATH | tr ':' '\n' | wc -l)"
 # echo "🔍 First 5 PATH entries:"
 # echo $PATH | tr ':' '\n' | head -5
+
+export PATH="/Users/user/bin:/Users/user/.local/bin:$PATH"
+export NVM_DIR="$HOME/.nvm"
+export PNPM_HOME="/Users/user/Library/pnpm"
+export PATH="$HOME/.pyenv/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"
+export PATH="/Users/user/.codeium/windsurf/bin:$PATH"
+export PATH="/Users/user/.codeium/windsurf/bin:$PATH"
+export PATH="$PATH:/Users/user/.cache/lm-studio/bin"
+export PATH=$PATH:$(go env GOPATH)/bin
+
+##### START PATH, other Globals #####
+# Path
+export PATH="/Users/user/bin:/Users/user/.local/bin:$PATH"
+
+# History
+HISTSIZE=10000000
+SAVEHIST=10000000
+HISTFILE=~/.zsh_history
+
+##### END PATH #####
+
+##### START NodeJS, NVMe, PNPM, etc. #####
+# NVMe
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# pnpm
+export PNPM_HOME="/Users/user/Library/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+# pnpm end
+##### END NodeJS, NVMe, PNPM, etc. #####
+
+##### START Python #####
+# Load pyenv automatically by adding
+   # the following to ~/.bashrc or ~/.zshrc:
+export PATH="$HOME/.pyenv/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.bun/bin:$PATH"
+# export PATH="$HOME/.pyenv/bin:$PATH"
+eval "$(pyenv init --path)"
+eval "$(pyenv init -)"
+eval "$(pyenv virtualenv-init -)"
+
+# pyenv
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+##### END Python #####

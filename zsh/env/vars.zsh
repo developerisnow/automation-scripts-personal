@@ -160,13 +160,7 @@ checkenv() {
 }
 
 # === Migrated from old .zshrc ===
-export PATH="/Users/user/bin:/Users/user/.local/bin:$PATH"
-export NVM_DIR="$HOME/.nvm"
-export PNPM_HOME="/Users/user/Library/pnpm"
-export PATH="$HOME/.pyenv/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PYENV_ROOT="$HOME/.pyenv"
-export PATH="$HOME/.local/bin:$PATH"
+
 export OPENAI_API_KEY='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'
 #export OPENAI_API_KEY='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'
 #export OPENAI_API_KEY='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'
@@ -191,12 +185,8 @@ export HYPERBOLIC_DEEPSEEK_API_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWI
 export REPLICATE_API_TOKEN='r8_36H3VUB6GAj5PzxHOMU4DTGfWrRybVI4TVLYD'
 export SERPER_API_KEY='ef7e18fd3f62a1f37af0bad488aa0ad3f1ffe191'
 export cookie='__cf_bm=2bpzdrBeBuB.aRac3yZ6B3tK2DZbYTO3veunI5Jmwzw-1692358287-0-AetIMxBE7zgUFvDn8BDdBVLg3o02zO6FKYIngnGpbhYBs1naexSavJ/hrqefYw4HTuOZi1ov4cWziH03Y8y73b8=; cf_clearance=Yp3Uq.A9exauy.yAwJ7ZolpKgcDPBC6YYLTIXaPsHj8-1692358288-0-1-d32615c.97def31e.5a333ebc-0.2.1692358288; sessionKey=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; intercom-device-id-lupk8zyo=e8003654-7913-4d47-869f-9d2923f832b5; intercom-session-lupk8zyo=TW1lS0ZyQkY4VXlyS05NcHJOaGwxazVheXplYytwSXk2VWhuaDROQ041RGtVcVl2bXBjdnFNK0ZjZnBlV2hiWC0tcmJ2ZEcxb3ZIRmtUaXVWdDRQWEx5dz09--672b812caf992d458ac3986a1aa1a16c38c97650'
-export PATH="/Users/user/.codeium/windsurf/bin:$PATH"
-export PATH="/Users/user/.codeium/windsurf/bin:$PATH"
-export PATH="$PATH:/Users/user/.cache/lm-studio/bin"
-export PATH=$PATH:$(go env GOPATH)/bin
+
 export DEEPSEEK_API_KEY=sk-19d4b9c3778b49248d67964bf9b1aa39
 export CRAWL4AI_API_TOKEN=your_secret_token
 export O2P_OUTPUT_DIR="/Users/user/____Sandruk/___PKM/temp"
 export OBSIDIAN_VAULT_PATH="/Users/user/____Sandruk/___PKM"
-export PATH="/opt/homebrew/bin:$PATH"

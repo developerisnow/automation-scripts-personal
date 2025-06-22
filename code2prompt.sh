@@ -415,7 +415,7 @@ except:
         fi
     else
         # Build code2prompt command for other contexts
-        CMD_ARGS=("$PROJECT_PATH" "--tokens" "format" "--output-file" "$OUTPUT_FILE")
+        CMD_ARGS=("$PROJECT_PATH" "--tokens" "--output" "$OUTPUT_FILE")
         
         if [ -n "$INCLUDE_PATTERNS" ]; then
             CMD_ARGS+=("--include" "$INCLUDE_PATTERNS")
@@ -597,7 +597,7 @@ elif [ "$COMMAND" = "bcode2prompt" ]; then
                     # Get content from clipboard and append to output file
                     pbpaste >> "$OUTPUT_FILE"
                     # Add token count info
-                    code2prompt "$path" --tokens format >> "$OUTPUT_FILE"
+                    code2prompt "$path" --tokens >> "$OUTPUT_FILE"
                 }
                 if [ $? -eq 0 ]; then
                     SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
@@ -638,7 +638,7 @@ else
 
     OUTPUT_FILE="$OUTPUT_DIR$(get_output_name "c2p_${FOLDER_NAME}" "txt")"
 
-    cd "$CURRENT_DIR" && code2prompt "$INPUT_FOLDER" --tokens format --output-file "$OUTPUT_FILE"
+    cd "$CURRENT_DIR" && code2prompt "$INPUT_FOLDER" --tokens --output "$OUTPUT_FILE"
 
     if [ -f "$OUTPUT_FILE" ]; then
         FILE_SIZE=$(du -h "$OUTPUT_FILE" | cut -f1)
