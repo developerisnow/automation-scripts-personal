@@ -121,5 +121,3 @@ alias dtips='echo "
 - dsizes           → Размеры образов
 "'
 
-# === Migrated from old .zshrc ===
-alias devopss='cd /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS && pwd'

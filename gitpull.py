@@ -42,12 +42,15 @@ def process_directories(base_path):
         format='%(asctime)s - %(message)s'
     )
 
-    # Walk only one level deep if no specific path provided
-    depth = 1
+    # Walk only one level deep - check base directory and immediate subdirectories
     for root, dirs, files in os.walk(base_path):
-        if os.path.abspath(root) != os.path.abspath(base_path):
-            if depth == 0:
-                continue
+        # Calculate depth relative to base path
+        depth = root[len(base_path):].count(os.sep)
+        
+        # Only process base directory (depth 0) and first level subdirectories (depth 1)
+        if depth > 1:
+            dirs[:] = []  # Don't recurse deeper
+            continue
         
         if '.git' in dirs:
             logging.info(f"\n{'='*50}")
@@ -56,8 +59,6 @@ def process_directories(base_path):
             
             output = run_git_commands(root)
             logging.info(output)
-        
-        depth -= 1
 
 def main():
     if len(sys.argv) > 1:

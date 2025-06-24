@@ -39,13 +39,13 @@ alias claude-stream='/Users/user/.nvm/versions/node/v22.13.0/bin/claude-no-error
 # ======================
 
 # Claudia dev with auto-update (recommended for daily use)
-alias claudia-dev='(cd /Users/user/__Repositories/LLMs-claudia__getAsterisk && git pull && bun run tauri dev > /dev/null 2>&1 &)'
+alias claudia-dev='(cd /Users/user/__Repositories/LLMs-claudia__getAsterisk && git pull && bun install && bun run tauri dev > /dev/null 2>&1 &)'
 
 # Claudia dev in foreground (for debugging)
-alias claudia-debug='(cd /Users/user/__Repositories/LLMs-claudia__getAsterisk && git pull && bun run tauri dev)'
+alias claudia-debug='(cd /Users/user/__Repositories/LLMs-claudia__getAsterisk && git pull && bun install && bun run tauri dev)'
 
 # Quick Claudia build & run
-alias claudia-build='(cd /Users/user/__Repositories/LLMs-claudia__getAsterisk && git pull && bun run tauri build)'
+alias claudia-build='(cd /Users/user/__Repositories/LLMs-claudia__getAsterisk && git pull && bun install && bun run tauri build)'
 
 # Kill all Claudia processes (if it gets stuck)
 alias claudia-kill='pkill -f "tauri dev" && pkill -f "claudia"'

@@ -190,3 +190,14 @@ export DEEPSEEK_API_KEY=sk-19d4b9c3778b49248d67964bf9b1aa39
 export CRAWL4AI_API_TOKEN=your_secret_token
 export O2P_OUTPUT_DIR="/Users/user/____Sandruk/___PKM/temp"
 export OBSIDIAN_VAULT_PATH="/Users/user/____Sandruk/___PKM"
+
+
+export CLAUDE_CODE_ENABLE_TELEMETRY=1
+export OTEL_METRICS_EXPORTER=otlp
+export OTEL_LOGS_EXPORTER=otlp
+export OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317
+
+# For faster data during testing (optional)
+export OTEL_METRIC_EXPORT_INTERVAL=10000
+export OTEL_LOGS_EXPORT_INTERVAL=5000

@@ -180,3 +180,6 @@ alias analysegit='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVO
 alias analysegit-filtered='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --typesexclude="md,json" --exclude-hidden --foldersexclude="test,logs"'
 alias analysegit-last='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --lastcommits'
 alias analysegit-branches='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --branches'
+
+# 🤖 Claude-specific commits
+alias gitclaude='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_claude_commit.sh'
