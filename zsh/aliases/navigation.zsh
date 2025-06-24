@@ -35,7 +35,7 @@ alias reposs='cd /Users/user/____Sandruk/__Vaults_Databases/__Repositories && pw
 alias sand='cd /Users/user/____Sandruk'
 alias pkm='cd /Users/user/____Sandruk/PKM'
 alias brain='cd /Users/user/____Sandruk/PKM/__SecondBrain'
-alias devopss='cd /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations && pwd && git status && git add . && git commit -m "auto update" && git push'
+alias devopss='cd /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations && pwd && git status && git add . && git commit -m "auto update"'
 
 # PARA Method folders
 alias projectss='cd /Users/user/____Sandruk/___PARA/__Projects && pwd'
