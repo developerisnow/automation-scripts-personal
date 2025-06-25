@@ -174,6 +174,9 @@ export OPENAI_API_KEY='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'
 # Sergey Sadovnikov api-key of Anthropic
 # export ANTHROPIC_API_KEY='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'
 # Hypetrain aalexswww@hypetrain.io
+# Hypetrain NPM Token
+export NPM_TOKEN="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"
+# NPM_TOKEN="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" npm view @infludb-inc/hypetrain-common versions --json
 # Gemini API key annakult36389@gmail.com
 export GEMINI_API_KEY='AIzaSyAJ12T7aYqjuDk79QmI0Qbjw5_vYQ6C5Go'
 # Gemini API key aalexswww@gmail.com

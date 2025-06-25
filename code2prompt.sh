@@ -52,6 +52,100 @@ get_output_name() {
     fi
 }
 
+# Helper: simple fallback aggregator
+simple_aggregator() {
+    local input_path="$1"
+    local output_file="$2"
+    local folder_name=$(basename "$input_path")
+    
+    echo "🔄 Используется простой агрегатор (fallback mode)"
+    
+    # Create header
+    {
+        echo "# Code Aggregation: $folder_name"
+        echo ""
+        echo "Generated on: $(date '+%Y-%m-%d %H:%M')"
+        echo "Path: $input_path"
+        echo ""
+        echo "## Directory Structure"
+        echo ""
+        echo "\`\`\`"
+        cd "$CURRENT_DIR" && find "$input_path" -type f -not -path "*/\.*" | sort | tree --fromfile 2>/dev/null || find "$input_path" -type f -not -path "*/\.*" | sort
+        echo "\`\`\`"
+        echo ""
+        echo "## File Contents"
+        echo ""
+    } > "$output_file"
+    
+    # Add all files
+    cd "$CURRENT_DIR"
+    find "$input_path" -type f -not -path "*/\.*" | sort | while read -r file; do
+        if [ -f "$file" ]; then
+            {
+                echo ""
+                echo "### \`$file\`"
+                echo ""
+                # Detect file type and add appropriate code block
+                case "$file" in
+                    *.md) echo "\`\`\`markdown" ;;
+                    *.py) echo "\`\`\`python" ;;
+                    *.js) echo "\`\`\`javascript" ;;
+                    *.ts) echo "\`\`\`typescript" ;;
+                    *.json) echo "\`\`\`json" ;;
+                    *.yml|*.yaml) echo "\`\`\`yaml" ;;
+                    *.sh) echo "\`\`\`bash" ;;
+                    *) echo "\`\`\`" ;;
+                esac
+                cat "$file"
+                echo ""
+                echo "\`\`\`"
+                echo ""
+                echo "---"
+            } >> "$output_file"
+        fi
+    done
+    
+    # Add footer with stats
+    {
+        echo ""
+        echo "## Statistics"
+        echo ""
+        echo "- **Total files**: $(find "$input_path" -type f -not -path "*/\.*" | wc -l | tr -d ' ')"
+        echo "- **Total size**: $(du -sh "$input_path" 2>/dev/null | cut -f1 || echo "Unknown")"
+        echo "- **Generated**: $(date '+%Y-%m-%d %H:%M:%S')"
+    } >> "$output_file"
+}
+
+# Helper: check if code2prompt output seems incomplete
+is_output_incomplete() {
+    local output_file="$1"
+    local input_path="$2"
+    
+    if [ ! -f "$output_file" ]; then
+        return 0  # File doesn't exist = incomplete
+    fi
+    
+    # Get actual directory size (in bytes)
+    local dir_size=$(find "$input_path" -type f -not -path "*/\.*" -exec wc -c {} + 2>/dev/null | tail -n1 | awk '{print $1}' || echo "0")
+    local output_size=$(wc -c < "$output_file" 2>/dev/null || echo "0")
+    
+    # If output is less than 10% of input size, consider it incomplete
+    # Also check if output is smaller than 10KB when directory has multiple files
+    local file_count=$(find "$input_path" -type f -not -path "*/\.*" 2>/dev/null | wc -l | tr -d ' ')
+    
+    if [ "$dir_size" -gt 0 ] && [ "$output_size" -lt $((dir_size / 10)) ]; then
+        echo "⚠️  code2prompt вывод подозрительно мал: $output_size байт vs $dir_size байт исходников"
+        return 0  # Incomplete
+    fi
+    
+    if [ "$file_count" -gt 3 ] && [ "$output_size" -lt 10240 ]; then
+        echo "⚠️  code2prompt вывод слишком мал для $file_count файлов: $output_size байт"
+        return 0  # Incomplete
+    fi
+    
+    return 1  # Complete
+}
+
 # Helper: read JSON config
 read_config() {
     if [ ! -f "$CONFIG_FILE" ]; then
@@ -623,7 +717,7 @@ elif [ "$COMMAND" = "bcode2prompt" ]; then
     fi
 
 else
-    # Regular acode2prompt functionality
+    # Regular acode2prompt functionality with fallback
     INPUT_FOLDER="${ARGS[0]}"
     
     # Получаем путь к папке
@@ -638,15 +732,41 @@ else
 
     OUTPUT_FILE="$OUTPUT_DIR$(get_output_name "c2p_${FOLDER_NAME}" "txt")"
 
+    echo "🔍 Пробуем code2prompt..."
     cd "$CURRENT_DIR" && code2prompt "$INPUT_FOLDER" --tokens format --output-file "$OUTPUT_FILE"
 
-    if [ -f "$OUTPUT_FILE" ]; then
-        FILE_SIZE=$(du -h "$OUTPUT_FILE" | cut -f1)
-        echo "Файл успешно сохранён: $OUTPUT_FILE"
-        echo "Размер файла: $FILE_SIZE"
+    # Check if output seems incomplete and use fallback if needed
+    if is_output_incomplete "$OUTPUT_FILE" "$INPUT_FOLDER"; then
+        echo ""
+        echo "🚨 code2prompt дал неполный результат - переключаемся на fallback агрегатор"
+        echo ""
+        
+        # Rename the incomplete file for reference
+        if [ -f "$OUTPUT_FILE" ]; then
+            mv "$OUTPUT_FILE" "${OUTPUT_FILE}.incomplete"
+            echo "📁 Неполный вывод сохранён как: ${OUTPUT_FILE}.incomplete"
+        fi
+        
+        # Use simple aggregator
+        simple_aggregator "$INPUT_FOLDER" "$OUTPUT_FILE"
+        
+        if [ -f "$OUTPUT_FILE" ]; then
+            FILE_SIZE=$(du -h "$OUTPUT_FILE" | cut -f1)
+            echo ""
+            echo "✅ Файл успешно создан через fallback агрегатор: $OUTPUT_FILE"
+            echo "📊 Размер файла: $FILE_SIZE"
+            echo ""
+            echo "💡 Совет: В следующий раз можешь использовать простой агрегатор напрямую:"
+            echo "   find $INPUT_FOLDER -name '*.md' -exec cat {} \\;"
+        else
+            echo "❌ Ошибка: Fallback агрегатор тоже не смог создать файл."
+            exit 1
+        fi
     else
-        echo "Ошибка: Файл не был создан."
-        exit 1
+        # code2prompt worked fine
+        FILE_SIZE=$(du -h "$OUTPUT_FILE" | cut -f1)
+        echo "✅ Файл успешно сохранён через code2prompt: $OUTPUT_FILE"
+        echo "📊 Размер файла: $FILE_SIZE"
     fi
 fi
 

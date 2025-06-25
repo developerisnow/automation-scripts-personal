@@ -51,6 +51,7 @@ load_if_exists "$ZSH_CONFIG/aliases/tool-obsidian.zsh"
 load_if_exists "$ZSH_CONFIG/aliases/tool-taskmaster.zsh"
 load_if_exists "$ZSH_CONFIG/aliases/tool-tree.zsh"
 load_if_exists "$ZSH_CONFIG/aliases/tool-claude.zsh"
+load_if_exists "$ZSH_CONFIG/aliases/tool-gemini.zsh"
 
 # 4. Language-specific tools
 load_if_exists "$ZSH_CONFIG/aliases/tools-node.zsh"
