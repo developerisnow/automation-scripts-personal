@@ -1,60 +1,45 @@
 #!/bin/zsh
-# 🎯 Claude Monitoring Aliases
+# 🎯 Claude Monitoring Aliases (Long names as requested)
 
 # Source the monitor functions
 source /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh/functions/claude-monitor.zsh
 
-# 📊 Quick monitoring commands
-alias monclaudem='claude_monitor_live'           # Live monitor all agents
-alias monclaudes='claude_workspace_stats'        # Quick stats by workspace
-alias monclauded='claude_dashboard'              # Full dashboard in tmux
-alias monclaudew='claude_watch 70 10'           # Watch for high usage
-alias monclaudek='claude_kill_heavy 80'         # Kill agents > 80% CPU
-alias monclaudee='claude_export_stats'          # Export stats to file
+# 📊 Monitoring commands with long names
+alias monclaude='claude_monitor_live'              # Live monitor all agents
+alias monclaude-stats='claude_workspace_stats'     # Quick stats by workspace
+alias monclaude-dash='claude_dashboard'            # Full dashboard in tmux
+alias monclaude-watch='claude_watch 70 10'         # Watch for high usage
+alias monclaude-kill='claude_kill_heavy 80'        # Kill agents > 80% CPU
+alias monclaude-export='claude_export_stats'       # Export stats to file
+alias monclaude-sum='claude_summary'               # Summary
+alias monclaude-killall='claude_kill_all'          # Kill all agents
 
 # 🎨 Workspace-specific monitors
-alias monclaudem-ht='ps aux | grep -E "claude" | grep -E "HypeTrain|hypetrain" | grep -v grep'
-alias monclaudem-tw='ps aux | grep -E "claude" | grep -E "PKM|LLMs-|tg-mcp" | grep -v grep'
+alias monclaude-ht='ps aux | command grep -E "claude" | command grep -E "HypeTrain|hypetrain" | command grep -v grep'
+alias monclaude-tw='ps aux | command grep -E "claude" | command grep -E "PKM|LLMs-|tg-mcp" | command grep -v grep'
 
-# 📈 Resource summaries
-claude_summary() {
-    echo "🤖 CLAUDE AGENTS SUMMARY"
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━"
+# 📈 Quick system check
+monclaude-quick() {
+    echo "🤖 CLAUDE QUICK CHECK - $(date '+%H:%M:%S')"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
-    local total_agents=$(ps aux | grep -E "claude-code|claudecd" | grep -v grep | wc -l)
-    local total_cpu=$(ps aux | grep -E "claude-code|claudecd" | grep -v grep | awk '{sum+=$3} END {print sum}')
-    local total_mem=$(ps aux | grep -E "claude-code|claudecd" | grep -v grep | awk '{sum+=$4} END {print sum}')
-    
-    echo "📊 Total Agents: $total_agents"
-    echo "💻 Total CPU: ${total_cpu:-0}%"
-    echo "🧠 Total Memory: ${total_mem:-0}%"
-    echo ""
-    
-    # Per workspace
-    echo "🚂 HypeTrain: $(ps aux | grep -E "claude" | grep -E "HypeTrain|hypetrain" | grep -v grep | wc -l) agents"
-    echo "👯 Twin1: $(ps aux | grep -E "claude" | grep -E "PKM|LLMs-|tg-mcp" | grep -v grep | wc -l) agents"
-}
-
-alias monclaudesum='claude_summary'
-
-# 🚨 Emergency kill all
-claude_kill_all() {
-    echo "⚠️ This will kill ALL Claude agents!"
-    echo -n "Are you sure? (yes/no): "
-    read answer
-    if [[ "$answer" == "yes" ]]; then
-        pkill -f "claude-code"
-        pkill -f "claudecd"
-        echo "✅ All Claude agents terminated"
-    else
-        echo "❌ Cancelled"
+    local count=$(ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | wc -l)
+    if [[ $count -eq 0 ]]; then
+        echo "❌ No Claude agents running"
+        return
     fi
+    
+    echo "✅ Active agents: $count"
+    echo ""
+    ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | \
+        awk '{printf "PID: %-8s CPU: %-6s MEM: %-6s CMD: %s\n", $2, $3"%", $4"%", $11}'
 }
 
-alias monclaudekall='claude_kill_all'
+alias monclaude-q='monclaude-quick'
 
-echo "📊 Claude monitoring loaded! Quick commands:"
-echo "  • cm - Live monitor"
-echo "  • cs - Quick stats"
-echo "  • cd - Full dashboard"
-echo "  • csum - Summary"
+echo "📊 Claude monitoring loaded! Commands:"
+echo "  • monclaude         - Live monitor"
+echo "  • monclaude-stats   - Workspace stats"
+echo "  • monclaude-dash    - Full dashboard"
+echo "  • monclaude-sum     - Quick summary"
+echo "  • monclaude-q       - Quick check"

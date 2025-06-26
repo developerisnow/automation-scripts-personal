@@ -14,19 +14,14 @@ claude_monitor_live() {
         echo "───────────────────────────────────────────────────────────────────────────────"
         
         # Get all claude processes with details
-        ps aux | grep -E "claude-code|claudecd" | grep -v grep | while read -r line; do
+        ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | while read -r line; do
             pid=$(echo "$line" | awk '{print $2}')
             cpu=$(echo "$line" | awk '{print $3}')
             mem=$(echo "$line" | awk '{print $4}')
             time=$(echo "$line" | awk '{print $10}')
             
-            # Get working directory
-            if [[ -d "/proc/$pid/cwd" ]]; then
-                cwd=$(readlink /proc/$pid/cwd 2>/dev/null || echo "N/A")
-            else
-                # macOS way
-                cwd=$(lsof -p $pid 2>/dev/null | grep cwd | awk '{print $NF}' | head -1 || echo "N/A")
-            fi
+            # Get working directory (macOS way)
+            cwd=$(lsof -p $pid 2>/dev/null | command grep cwd | awk '{print $NF}' | head -1 || echo "N/A")
             
             # Determine workspace based on directory
             workspace="Unknown"
@@ -60,24 +55,25 @@ claude_monitor_live() {
         echo "───────────────────────────────────────────────────────────────────────────────"
         
         # Total resources
-        total_cpu=$(ps aux | grep -E "claude-code|claudecd" | grep -v grep | awk '{sum+=$3} END {print sum}')
-        total_mem=$(ps aux | grep -E "claude-code|claudecd" | grep -v grep | awk '{sum+=$4} END {print sum}')
-        agent_count=$(ps aux | grep -E "claude-code|claudecd" | grep -v grep | wc -l)
+        total_cpu=$(ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | awk '{sum+=$3} END {print sum}')
+        total_mem=$(ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | awk '{sum+=$4} END {print sum}')
+        agent_count=$(ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | wc -l)
         
         echo "🤖 Active Agents: $agent_count"
         echo "💻 Total CPU: ${total_cpu:-0}%"
         echo "🧠 Total Memory: ${total_mem:-0}%"
         
-        # System resources
+        # System resources (macOS)
         if command -v top &> /dev/null; then
-            cpu_idle=$(top -l 1 | grep "CPU usage" | awk '{print $7}' | sed 's/%//')
-            cpu_used=$((100 - ${cpu_idle%.*}))
-            echo "🖥️ System CPU: ${cpu_used}%"
+            cpu_info=$(top -l 1 | command grep "CPU usage" | head -1)
+            if [[ -n "$cpu_info" ]]; then
+                echo "🖥️ System: $cpu_info"
+            fi
         fi
         
         echo ""
-        echo "🔄 Refreshing every 2 seconds... (Ctrl+C to exit)"
-        sleep 2
+        echo "🔄 Refreshing every 5 seconds... (Ctrl+C to exit)"
+        sleep 5
     done
 }
 
@@ -88,27 +84,49 @@ claude_workspace_stats() {
     
     # HypeTrain stats
     echo "🚂 HYPETRAIN WORKSPACE:"
-    local ht_pids=$(ps aux | grep -E "claude" | grep -E "HypeTrain|hypetrain" | grep -v grep | awk '{print $2}')
+    local ht_pids=$(ps aux | command grep -E "claude" | command grep -E "HypeTrain|hypetrain" | command grep -v grep | awk '{print $2}')
     if [[ -n "$ht_pids" ]]; then
-        local ht_cpu=$(ps aux | grep -E "claude" | grep -E "HypeTrain|hypetrain" | grep -v grep | awk '{sum+=$3} END {print sum}')
-        local ht_mem=$(ps aux | grep -E "claude" | grep -E "HypeTrain|hypetrain" | grep -v grep | awk '{sum+=$4} END {print sum}')
-        local ht_count=$(echo "$ht_pids" | wc -l)
-        echo "  Agents: $ht_count | CPU: ${ht_cpu}% | Memory: ${ht_mem}%"
+        local ht_cpu=$(ps aux | command grep -E "claude" | command grep -E "HypeTrain|hypetrain" | command grep -v grep | awk '{sum+=$3} END {print sum}')
+        local ht_mem=$(ps aux | command grep -E "claude" | command grep -E "HypeTrain|hypetrain" | command grep -v grep | awk '{sum+=$4} END {print sum}')
+        local ht_count=$(echo "$ht_pids" | wc -l | tr -d ' ')
+        echo "  Agents: $ht_count | CPU: ${ht_cpu:-0}% | Memory: ${ht_mem:-0}%"
     else
         echo "  No active agents"
     fi
     
     echo ""
     echo "👯 TWIN1 WORKSPACE:"
-    local tw_pids=$(ps aux | grep -E "claude" | grep -E "PKM|LLMs-|tg-mcp" | grep -v grep | awk '{print $2}')
+    local tw_pids=$(ps aux | command grep -E "claude" | command grep -E "PKM|LLMs-|tg-mcp" | command grep -v grep | awk '{print $2}')
     if [[ -n "$tw_pids" ]]; then
-        local tw_cpu=$(ps aux | grep -E "claude" | grep -E "PKM|LLMs-|tg-mcp" | grep -v grep | awk '{sum+=$3} END {print sum}')
-        local tw_mem=$(ps aux | grep -E "claude" | grep -E "PKM|LLMs-|tg-mcp" | grep -v grep | awk '{sum+=$4} END {print sum}')
-        local tw_count=$(echo "$tw_pids" | wc -l)
-        echo "  Agents: $tw_count | CPU: ${tw_cpu}% | Memory: ${tw_mem}%"
+        local tw_cpu=$(ps aux | command grep -E "claude" | command grep -E "PKM|LLMs-|tg-mcp" | command grep -v grep | awk '{sum+=$3} END {print sum}')
+        local tw_mem=$(ps aux | command grep -E "claude" | command grep -E "PKM|LLMs-|tg-mcp" | command grep -v grep | awk '{sum+=$4} END {print sum}')
+        local tw_count=$(echo "$tw_pids" | wc -l | tr -d ' ')
+        echo "  Agents: $tw_count | CPU: ${tw_cpu:-0}% | Memory: ${tw_mem:-0}%"
     else
         echo "  No active agents"
     fi
+}
+
+# 📈 Resource summaries
+claude_summary() {
+    echo "🤖 CLAUDE AGENTS SUMMARY"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━"
+    
+    local total_agents=$(ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | wc -l | tr -d ' ')
+    local total_cpu=$(ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | awk '{sum+=$3} END {print sum}')
+    local total_mem=$(ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | awk '{sum+=$4} END {print sum}')
+    
+    echo "📊 Total Agents: $total_agents"
+    echo "💻 Total CPU: ${total_cpu:-0}%"
+    echo "🧠 Total Memory: ${total_mem:-0}%"
+    echo ""
+    
+    # Per workspace
+    local ht_count=$(ps aux | command grep -E "claude" | command grep -E "HypeTrain|hypetrain" | command grep -v grep | wc -l | tr -d ' ')
+    local tw_count=$(ps aux | command grep -E "claude" | command grep -E "PKM|LLMs-|tg-mcp" | command grep -v grep | wc -l | tr -d ' ')
+    
+    echo "🚂 HypeTrain: ${ht_count:-0} agents"
+    echo "👯 Twin1: ${tw_count:-0} agents"
 }
 
 # 🎯 Kill high-resource agents
@@ -116,7 +134,7 @@ claude_kill_heavy() {
     local threshold=${1:-80}
     echo "🔍 Looking for agents using more than ${threshold}% CPU..."
     
-    ps aux | grep -E "claude-code|claudecd" | grep -v grep | while read -r line; do
+    ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | while read -r line; do
         pid=$(echo "$line" | awk '{print $2}')
         cpu=$(echo "$line" | awk '{print $3}')
         
@@ -144,13 +162,14 @@ claude_export_stats() {
         echo ""
         echo "DETAILED PROCESS LIST:"
         echo "=================================="
-        ps aux | grep -E "claude-code|claudecd" | grep -v grep
+        ps aux | command grep -E "claude-code|claudecd" | command grep -v grep
     } > "$filename"
     echo "📄 Stats exported to: $filename"
 }
 
 # 🎨 Pretty dashboard in tmux
 claude_dashboard() {
+    tmux new-session -d -s claude-monitor 2>/dev/null || tmux kill-session -t claude-monitor
     tmux new-session -d -s claude-monitor
     
     # Window 1: Live monitor
@@ -159,12 +178,12 @@ claude_dashboard() {
     
     # Window 2: System monitor
     tmux new-window -t claude-monitor:1 -n 'System'
-    tmux send-keys -t claude-monitor:1 'btop' C-m
+    tmux send-keys -t claude-monitor:1 'btop || htop || top' C-m
     
     # Window 3: Logs
     tmux new-window -t claude-monitor:2 -n 'Logs'
     tmux split-window -h -t claude-monitor:2
-    tmux send-keys -t claude-monitor:2.0 'tail -f ~/.claude/logs/*.log' C-m
+    tmux send-keys -t claude-monitor:2.0 'tail -f ~/.claude/logs/*.log 2>/dev/null || echo "Waiting for logs..."' C-m
     tmux send-keys -t claude-monitor:2.1 'watch -n 5 claude_workspace_stats' C-m
     
     tmux attach-session -t claude-monitor
@@ -178,7 +197,7 @@ claude_watch() {
     echo "👁️ Watching for CPU > ${cpu_threshold}% or Memory > ${mem_threshold}%"
     
     while true; do
-        ps aux | grep -E "claude-code|claudecd" | grep -v grep | while read -r line; do
+        ps aux | command grep -E "claude-code|claudecd" | command grep -v grep | while read -r line; do
             pid=$(echo "$line" | awk '{print $2}')
             cpu=$(echo "$line" | awk '{print $3}')
             mem=$(echo "$line" | awk '{print $4}')
@@ -199,18 +218,26 @@ claude_watch() {
     done
 }
 
-# 🎯 Quick aliases
-alias cmon='claude_monitor_live'
-alias cstats='claude_workspace_stats'
-alias cdash='claude_dashboard'
-alias cwatch='claude_watch'
-alias ckill='claude_kill_heavy'
-alias cexport='claude_export_stats'
+# 🚨 Emergency kill all
+claude_kill_all() {
+    echo "⚠️ This will kill ALL Claude agents!"
+    echo -n "Are you sure? (yes/no): "
+    read answer
+    if [[ "$answer" == "yes" ]]; then
+        pkill -f "claude-code" 2>/dev/null
+        pkill -f "claudecd" 2>/dev/null
+        echo "✅ All Claude agents terminated"
+    else
+        echo "❌ Cancelled"
+    fi
+}
 
 # Auto-export functions
 export -f claude_monitor_live
 export -f claude_workspace_stats
+export -f claude_summary
 export -f claude_kill_heavy
 export -f claude_export_stats
 export -f claude_dashboard
 export -f claude_watch
+export -f claude_kill_all
