@@ -5,9 +5,9 @@
 # Пример комментария для ADHD: что делает → где находится → зачем нужно
 
 # Navigation to HypeTrain
-alias ht='cd /Users/user/__Repositories/HypeTrain'
+# alias ht='cd /Users/user/__Repositories/HypeTrain'
 alias hype='cd /Users/user/__Repositories/HypeTrain'
-alias hypetrain='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend'
+alias ht-backend='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend'  # Changed from hypetrain to ht-backend
 
 # HypeTrain commands
 alias hdocsw='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs && uv run mkdocs serve'

@@ -40,6 +40,68 @@ iterm-hsplit() {
 }
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🚂 HYPETRAIN PROJECT (iTerm2 version)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# HypeTrain workspace in iTerm2 (without tmux)
+hypetrain-iterm() {
+    osascript << 'EOF'
+    tell application "iTerm2"
+        create window with default profile
+        tell current window
+            -- Setup 4 panes for 4 repos
+            tell current session
+                split vertically with default profile
+                split horizontally with default profile
+            end tell
+            
+            tell last session of current tab
+                split horizontally with default profile
+            end tell
+            
+            -- Navigate to repos and show instructions
+            tell session 1 of current tab
+                write text "cd /Users/user/__Repositories/HypeTrain"
+                write text "echo '🚂 Monorepo | Try: claudecd or claude-code'"
+            end tell
+            
+            tell session 2 of current tab
+                write text "cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden"
+                write text "echo '🌱 DevOps Garden | Try: claudecd or claude-code'"
+            end tell
+            
+            tell session 3 of current tab
+                write text "cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend"
+                write text "echo '⚙️ Backend | Try: claudecd or claude-code'"
+            end tell
+            
+            tell session 4 of current tab
+                write text "cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs"
+                write text "echo '📚 Docs | Try: claudecd or claude-code'"
+            end tell
+            
+            -- Create monitoring tab
+            create tab with default profile
+            set name of current tab to "Monitoring"
+            tell current session
+                split vertically with default profile
+                write text "btop"
+            end tell
+            tell last session of current tab
+                write text "tail -f ~/.claude/logs/*.log 2>/dev/null || echo 'Claude logs'"
+            end tell
+            
+            -- Go back to dev tab
+            select tab 1
+        end tell
+    end tell
+EOF
+}
+
+# Quick alias
+alias hti='hypetrain-iterm'
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 🤖 AI WORKSPACE LAYOUTS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

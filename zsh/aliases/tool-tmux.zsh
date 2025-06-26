@@ -17,6 +17,77 @@ alias tns='tmux new -s'
 alias tks='tmux kill-session -t'
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# 🚂 HYPETRAIN PROJECT WORKSPACE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+# Launch HypeTrain development workspace (tmux version)
+hypetrain1() {
+    tmux new-session -d -s hypetrain
+    
+    # Window 1: Multi-repo development
+    tmux rename-window -t hypetrain:0 'HypeTrain-Dev'
+    
+    # Create 4 panes for 4 repos
+    tmux split-window -h -t hypetrain:0
+    tmux split-window -v -t hypetrain:0.0
+    tmux split-window -v -t hypetrain:0.2
+    
+    # Navigate to repos and try to continue sessions
+    # Pane 1: Monorepo
+    tmux send-keys -t hypetrain:0.0 'cd /Users/user/__Repositories/HypeTrain' C-m
+    tmux send-keys -t hypetrain:0.0 'echo "🚂 Monorepo | Try: claudecd or claude-code"' C-m
+    
+    # Pane 2: DevOps
+    tmux send-keys -t hypetrain:0.1 'cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden' C-m
+    tmux send-keys -t hypetrain:0.1 'echo "🌱 DevOps Garden | Try: claudecd or claude-code"' C-m
+    
+    # Pane 3: Backend
+    tmux send-keys -t hypetrain:0.2 'cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend' C-m
+    tmux send-keys -t hypetrain:0.2 'echo "⚙️ Backend | Try: claudecd or claude-code"' C-m
+    
+    # Pane 4: Docs (frontend ready for future)
+    tmux send-keys -t hypetrain:0.3 'cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs' C-m
+    tmux send-keys -t hypetrain:0.3 'echo "📚 Docs | Try: claudecd or claude-code"' C-m
+    # Future: hypetrain-frontend
+    
+    # Window 2: Monitoring & Logs
+    tmux new-window -t hypetrain:1 -n 'Monitor'
+    tmux split-window -h -t hypetrain:1
+    tmux send-keys -t hypetrain:1.0 'btop' C-m
+    tmux send-keys -t hypetrain:1.1 'tail -f ~/.claude/logs/*.log 2>/dev/null || echo "Claude logs will appear here"' C-m
+    
+    # Attach to session
+    tmux attach-session -t hypetrain
+}
+
+# Quick restore HypeTrain session
+ht1() {
+    if tmux has-session -t hypetrain 2>/dev/null; then
+        tmux attach-session -t hypetrain
+    else
+        hypetrain1
+    fi
+}
+
+# HypeTrain with automatic session continues
+hypetrain-auto() {
+    tmux new-session -d -s hypetrain-auto
+    
+    # Create 4 panes
+    tmux split-window -h -t hypetrain-auto:0
+    tmux split-window -v -t hypetrain-auto:0.0
+    tmux split-window -v -t hypetrain-auto:0.2
+    
+    # Auto-start with continue in each repo
+    tmux send-keys -t hypetrain-auto:0.0 'cd /Users/user/__Repositories/HypeTrain && claudecd' C-m
+    tmux send-keys -t hypetrain-auto:0.1 'cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden && claudecd' C-m
+    tmux send-keys -t hypetrain-auto:0.2 'cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend && claudecd' C-m
+    tmux send-keys -t hypetrain-auto:0.3 'cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs && claudecd' C-m
+    
+    tmux attach-session -t hypetrain-auto
+}
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # 🤖 AI CODING SESSIONS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -105,7 +176,7 @@ alias tcopy='tmux save-buffer - | pbcopy'
 
 # Search through all panes
 tsearch() {
-    tmux capture-pane -J -p -S -1000 | grep -i "$1"
+    tmux capture-pane -J -p -S -1000 | command grep -i "$1"
 }
 
 # Save all panes output to file
