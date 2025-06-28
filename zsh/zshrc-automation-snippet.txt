@@ -1,0 +1,15 @@
+#!/bin/zsh
+# 🚀 Add this to your ~/.zshrc for automations
+
+# Load all automations
+AUTOMATION_LOADER="/Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh/automation-master-loader.zsh"
+if [[ -f "$AUTOMATION_LOADER" ]]; then
+    source "$AUTOMATION_LOADER"
+else
+    echo "⚠️ Automation loader not found at: $AUTOMATION_LOADER"
+fi
+
+# Alternative: Load specific components only
+# source /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh/scripts/claude-monitor-loader.zsh
+# source /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh/scripts/tmux-workspaces-loader.zsh
+# source /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh/scripts/claude-json-loader.zsh

@@ -227,8 +227,8 @@ alias tlast='tmux last-pane'
 # Resize panes quickly
 alias tpane+='tmux resize-pane -U 10'
 alias tpane-='tmux resize-pane -D 10'
-alias tpane>='tmux resize-pane -R 10'
-alias tpane<='tmux resize-pane -L 10'
+alias 'tpane>='='tmux resize-pane -R 10'
+alias 'tpane<='='tmux resize-pane -L 10'
 
 # Monitor activity
 tmonitor() {

@@ -20,7 +20,7 @@ morning() {
     echo "Then in each pane: claudecd (continue) or claude-code (new)"
 }
 
-# Quick status check
+# Quick status check  
 hs() {
     echo "🚂 HypeTrain Sessions:"
     echo "━━━━━━━━━━━━━━━━━━━━"
