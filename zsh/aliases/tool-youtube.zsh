@@ -13,6 +13,9 @@ YT_TOOLS_SCRIPT="$HOME/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/
 # Single video subtitles (already fixed)
 alias ytsubs="node /Users/user/__Repositories/youtube-scrapping/youtube-captions-scraper/yt-subs.js"
 
+# Download and optimize subtitles in one command
+alias ytsubso="bash /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/youtube/yt-subs-optimized.sh"
+
 # Playlist subtitles
 alias ytsubsplaylist="$YT_TOOLS_SCRIPT subsplaylist"
 
@@ -115,6 +118,19 @@ ytlatestrans() {
     ytsubs "$latest"
 }
 
+# Optimize subtitles for reduced context
+alias ytoptimize='bash /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/youtube/yt-optimize.sh'
+alias ytopt='ytoptimize'  # Short alias
+
+# Batch optimize all subtitles in a folder
+ytoptall() {
+    local interval=${1:-2}
+    echo "🔄 Optimizing all subtitles with ${interval}min intervals"
+    find . -name "*.vtt" -o -name "*.srt" -o -name "*.md" | while read -r file; do
+        ytoptimize "$file" "$interval"
+    done
+}
+
 # 📝 Help
 # -------
 alias ythelp='echo "
@@ -123,6 +139,7 @@ alias ythelp='echo "
 
 📝 Subtitles:
   ytsubs <video>              - Download subtitles for single video
+  ytsubso <video> [lang] [min]- Download & optimize subtitles
   ytsubsplaylist <playlist>   - Download subtitles for playlist
   ytsubsall <channel>         - Download all channel subtitles
 
@@ -144,6 +161,9 @@ alias ythelp='echo "
 🎯 Quick Actions:
   ytlatestrans <channel>      - Get transcript of latest video
   ytbatch <file> <action>     - Process multiple channels
+  ytoptimize <file> [mins]    - Optimize subtitle timestamps
+  ytopt <file> [mins]         - Short alias for ytoptimize
+  ytoptall [mins]             - Optimize all subs in folder
 
 📊 All outputs saved to:
   ~/____Sandruk/___PKM/_Outputs_External/
