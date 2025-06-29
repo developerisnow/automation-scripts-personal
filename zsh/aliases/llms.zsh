@@ -8,10 +8,13 @@ alias transcribe='node /Users/user/____Sandruk/__Vaults_Databases/__Repositories
 alias replicateai='node /Users/user/____Sandruk/__Vaults_Databases/__Repositories/LLMs-openai-cookbook/whisper/whisper-app-nodejs/index.js replicateai'
 alias fasterWhisper='node /Users/user/____Sandruk/__Vaults_Databases/__Repositories/LLMs-openai-cookbook/whisper/whisper-app-nodejs/index.js fasterWhisper'
 
-
 # 🎬 YouTube Tools
 # ----------------
-alias ytsubs="node /Users/user/__Repositories/youtube-scrapping/youtube-captions-scraper/yt-subs.js"
+# Load comprehensive YouTube tools
+[ -f "$HOME/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh/aliases/tool-youtube.zsh" ] && \
+    source "$HOME/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/zsh/aliases/tool-youtube.zsh"
+
+# Legacy alias for compatibility
 alias yt='sh /Users/user/__Repositories/youtube-scrapping/youtube_channel_analyzer/scripts/alias-runner-yt-dlp.sh'
 
 # 🕷️ Web Scraping
