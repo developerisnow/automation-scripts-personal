@@ -2,3 +2,4 @@ obsidian/temp/
 ._*
 *.logs
 git/logs/pkm-autocommit.log
+node_modules
