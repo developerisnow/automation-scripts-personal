@@ -10,6 +10,14 @@ alias gs='git status'
 alias gss='git status -s'  # Короткий формат
 alias gsb='git status -sb' # Короткий + branch info
 
+alias pkgtoken='echo ${NPM_TOKEN: -8}'
+alias pkgauth='curl -sI -H "Authorization: token $NPM_TOKEN" https://npm.pkg.github.com/@infludb-inc%2fhypetrain-common | head -3'
+alias pkgtesturl='npm view @infludb-inc/hypetrain-common dist.tarball'
+alias pkgcommon='npm view @infludb-inc/hypetrain-common versions --json | jq length'
+
+alias ghapitest='gh api developerisnow --jq .login'
+
+# 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
 # 📝 Adding & Committing
 # ----------------------
 alias ga='git add'
@@ -182,4 +190,4 @@ alias analysegit-last='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER
 alias analysegit-branches='python3 /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git-files-list-commits-analyzer.py --branches'
 
 # 🤖 Claude-specific commits
-alias gitclaude='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git_claude_commit.sh'
+alias gitclaude='sh /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations/git/git-claude/git_claude_commit.sh'

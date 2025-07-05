@@ -1,0 +1,159 @@
+{
+  "meta": {
+    "last_discovery": "2025-07-03T09:51:09Z",
+    "discovery_interval_hours": 24,
+    "version": "1.0"
+  },
+  "claude_paths": {
+    "/Users/user/.claude": {
+      "added_timestamp": "2025-01-23T14:42:02Z",
+      "type": "config",
+      "active": true
+    },
+    "/Users/user/.config/claude": {
+      "added_timestamp": "2025-01-23T14:42:02Z",
+      "type": "config",
+      "active": true
+    },
+    "/Users/user/__Repositories/Hypetrain/.claude": {
+      "added_timestamp": "2025-01-23T14:42:02Z",
+      "type": "project",
+      "active": true
+    },
+    "/Users/user/__Repositories/Hypetrain/repositories/hypetrain-backend/.claude": {
+      "added_timestamp": "2025-01-23T14:42:02Z",
+      "type": "project",
+      "active": true
+    },
+    "/Users/user/__Repositories/Hypetrain/repositories/hypetrain-garden/.claude": {
+      "added_timestamp": "2025-01-23T14:42:02Z",
+      "type": "project",
+      "active": true
+    },
+    "/Users/user/__Repositories/Hypetrain/repositories/hypetrain-docs/.claude": {
+      "added_timestamp": "2025-01-23T14:42:02Z",
+      "type": "project",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-voice-24-7-transcription-context/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/Assistant-Telegram-nestjs/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-Telethon-CC__o2alexanderfedin/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-OCRCheksServer-demo__o2alexanderfedin/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/tg-mcp-assistant-telegram-crm__developerisnow/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-lemmy-claude-code-dot-files-awesome__badlogic/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-lemmy-claude-code-dot-files-awesome__badlogic/apps/claude-trace/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-SuperClaude__NomeAK/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-claude-code-exporter/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend-export2/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden copy/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend-signature/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend-archiving/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/repositories/hypetrain-backend/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/HypeTrain/alex-PKM-hypetrain/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-telethon-architecture-docs__o2alexanderfedin/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-claude-code-action-oauth/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-awesome-claude-code__hesreallyhim/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/LLMs-MCP-typescript__brayanepv1/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/__Repositories/llm-claude-task-master__by_eyaltoledano/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    },
+    "/Users/user/____Sandruk/___PKM/.claude": {
+      "added_timestamp": "2025-07-02T11:50:27Z",
+      "type": "auto-discovered",
+      "active": true
+    }
+  }
+}

@@ -57,9 +57,9 @@ fi
 # 📁 Directory operations
 # -----------------------
 alias mkdir='mkdir -pv'  # Создавать родительские директории + verbose
-alias cp='cp -iv'        # Interactive + verbose
-alias mv='mv -iv'        # Interactive + verbose
-alias rm='rm -i'         # Interactive (защита от случайного удаления)
+# alias cp='cp -iv'        # Interactive + verbose
+# alias mv='mv -iv'        # Interactive + verbose
+# alias rm='rm -i'         # Interactive (защита от случайного удаления)
 
 # Безопасное удаление в корзину (если установлен trash)
 if command -v trash &> /dev/null; then
@@ -112,7 +112,7 @@ alias s='subl'
 
 # 🕐 Date & Time
 # --------------
-alias now='date +"%Y-%m-%d %H:%M:%S"'
+alias now='date +"%Y-%m-%d Week %V %H:%M:%S "'
 alias nowdate='date +"%Y-%m-%d"'
 alias nowtime='date +"%H:%M:%S"'
 alias week='date +%V'  # Номер недели
