@@ -3,115 +3,114 @@
 # ==============================================================
 # One place to manage all your important directories
 
-# 🧠 PKM & Knowledge Management
-export pkm="/Users/user/____Sandruk/___PKM"
-export second_brain="$pkm/__SecondBrain"
-export dailies="$second_brain/Dailies"
-export dailies_outputs="$second_brain/Dailies_Outputs"
-export vaults="$pkm/__Vaults_Databases"
-export tools_vault="$vaults/__Tools__vault"
-export outputs_ai="$pkm/_Outputs_AI"
+# # 🧠 PKM & Knowledge Management
+# export pkm="/Users/user/____Sandruk/___PKM"
+# export second_brain="$pkm/__SecondBrain"
+# export dailies="$second_brain/Dailies"
+# export dailies_outputs="$second_brain/Dailies_Outputs"
+# export vaults="$pkm/__Vaults_Databases"
+# export tools_vault="$vaults/__Tools__vault"
+# export outputs_ai="$pkm/_Outputs_AI"
 
-# 📚 PARA Method Directories
-export para="/Users/user/____Sandruk/___PARA"
-export projects="$para/__Projects"
-export areas="$para/__Areas"
-export resources="$para/__Resources"
-export archive="$para/__Archive"
+# # 📚 PARA Method Directories
+# export para="/Users/user/____Sandruk/___PARA"
+# export projects="$para/__Projects"
+# export areas="$para/__Areas"
+# export resources="$para/__Resources"
+# export archive="$para/__Archive"
 
-# 💼 Career & DevOps
-export career="$areas/_5_CAREER"
-export devops="$career/DEVOPS"
-export automations="$devops/automations"
-export memory_bank="$devops/memory-bank"
+# # 💼 Career & DevOps
+# export career="$areas/_5_CAREER"
+# export devops="$career/DEVOPS"
+# export automations="$devops/automations"
+# export memory_bank="$devops/memory-bank"
 
-# 🚂 HypeTrain Project
-export hypetrain="/Users/user/__Repositories/HypeTrain"
-export hypetrain_backend="$hypetrain/repositories/hypetrain-backend"
-export hypetrain_garden="$hypetrain/repositories/hypetrain-garden"
-export hypetrain_docs="$hypetrain/repositories/hypetrain-docs"
-export hypetrain_frontend="$hypetrain/repositories/hypetrain-frontend"
-export alex_pkm="$hypetrain/alex-PKM-hypetrain"
+# # 🚂 HypeTrain Project
+# export hypetrain="/Users/user/__Repositories/HypeTrain"
+# export hypetrain_backend="$hypetrain/repositories/hypetrain-backend"
+# export hypetrain_garden="$hypetrain/repositories/hypetrain-garden"
+# export hypetrain_docs="$hypetrain/repositories/hypetrain-docs"
+# export hypetrain_frontend="$hypetrain/repositories/hypetrain-frontend"
+# export alex_pkm="$hypetrain/alex-PKM-hypetrain"
 
-# 📂 Other Repositories
-export repos="/Users/user/__Repositories"
-export ccexporter="$repos/LLMs-claude-code-exporter"
-export pm_agents="$repos/LLMs-github-project-management-agents"
-export tg_crm="$repos/tg-mcp-assistant-telegram-crm__developerisnow"
-export claude_task="$repos/claude-task-master"
-export airpg="$repos/LLMs-airpg__belbix-master-week6-1"
+# # 📂 Other Repositories
+# export repos="/Users/user/__Repositories"
+# export ccexporter="$repos/LLMs-claude-code-exporter"
+# export pm_agents="$repos/LLMs-github-project-management-agents"
+# export tg_crm="$repos/tg-mcp-assistant-telegram-crm__developerisnow"
+# export claude_task="$repos/claude-task-master"
+# export airpg="$repos/LLMs-airpg__belbix-master-week6-1"
 
 # 🔧 Configuration Directories
 export claude_config="/Users/user/.claude"
-export claude_settings="/Users/user/.config/claude"
 export zsh_config="/Users/user/.config/zsh"
 export tmux_layouts="/Users/user/.tmux-layouts"
 
-# 📦 Common Work Directories
-export downloads="/Users/user/Downloads"
-export desktop="/Users/user/Desktop"
-export temp="$pkm/temp"
+# # 📦 Common Work Directories
+# export downloads="/Users/user/Downloads"
+# export desktop="/Users/user/Desktop"
+# export temp="$pkm/temp"
 
 # 🌐 Cloud & Sync
-export nextcloud="/Users/user/NextCloud2"
-export backups="$nextcloud/Backups"
+# export nextcloud="/Users/user/NextCloud2"
+# export backups="$nextcloud/Backups"
 
 # ==============================================
 # 🚀 NAVIGATION ALIASES - Just type the name!
 # ==============================================
 
-# PKM Navigation
-alias pkm='cd $pkm'
-alias brain='cd $second_brain'
-alias dailies='cd $dailies'
-alias outputs='cd $outputs_ai'
-alias vaults='cd $vaults'
-alias tools='cd $tools_vault'
+# # PKM Navigation
+# alias pkm='cd $pkm'
+# alias brain='cd $second_brain'
+# alias dailies='cd $dailies'
+# alias outputs='cd $outputs_ai'
+# alias vaults='cd $vaults'
+# alias tools='cd $tools_vault'
 
-# PARA Navigation
-alias para='cd $para'
-alias projects='cd $projects'
-alias areas='cd $areas'
-alias resources='cd $resources'
-alias archive='cd $archive'
+# # PARA Navigation
+# alias para='cd $para'
+# alias projects='cd $projects'
+# alias areas='cd $areas'
+# alias resources='cd $resources'
+# alias archive='cd $archive'
 
-# Career & DevOps
-alias career='cd $career'
-alias devops='cd $devops'
-alias auto='cd $automations'
-alias automations='cd $automations'
-alias memory='cd $memory_bank'
+# # Career & DevOps
+# alias career='cd $career'
+# alias devops='cd $devops'
+# alias auto='cd $automations'
+# alias automations='cd $automations'
+# alias memory='cd $memory_bank'
 
-# HypeTrain Navigation
-alias ht='cd $hypetrain'
-alias hypetrain='cd $hypetrain'
-alias htback='cd $hypetrain_backend'
-alias htgarden='cd $hypetrain_garden'
-alias htdocs='cd $hypetrain_docs'
-alias htfront='cd $hypetrain_frontend'
-alias htpkm='cd $alex_pkm'
+# # HypeTrain Navigation
+# alias ht='cd $hypetrain'
+# alias hypetrain='cd $hypetrain'
+# alias htback='cd $hypetrain_backend'
+# alias htgarden='cd $hypetrain_garden'
+# alias htdocs='cd $hypetrain_docs'
+# alias htfront='cd $hypetrain_frontend'
+# alias htpkm='cd $alex_pkm'
 
-# Other Projects
-alias repos='cd $repos'
-alias exporter='cd $ccexporter'
-alias pmagents='cd $pm_agents'
-alias tgcrm='cd $tg_crm'
-alias taskmaster='cd $claude_task'
-alias airpg='cd $airpg'
+# # Other Projects
+# alias repos='cd $repos'
+# alias exporter='cd $ccexporter'
+# alias pmagents='cd $pm_agents'
+# alias tgcrm='cd $tg_crm'
+# alias taskmaster='cd $claude_task'
+# alias airpg='cd $airpg'
 
-# Config Directories
-alias cconfig='cd $claude_config'
-alias csettings='cd $claude_settings'
-alias zconfig='cd $zsh_config'
+# # Config Directories
+# alias cconfig='cd $claude_config'
+# alias csettings='cd $claude_settings'
+# alias zconfig='cd $zsh_config'
 
-# Common Directories
-alias dl='cd $downloads'
-alias dt='cd $desktop'
-alias tmp='cd $temp'
+# # Common Directories
+# alias dl='cd $downloads'
+# alias dt='cd $desktop'
+# alias tmp='cd $temp'
 
-# Cloud & Backup
-alias cloud='cd $nextcloud'
-alias backup='cd $backups'
+# # Cloud & Backup
+# alias cloud='cd $nextcloud'
+# alias backup='cd $backups'
 
 # ==============================================
 # 🎯 SMART NAVIGATION FUNCTIONS

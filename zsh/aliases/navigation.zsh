@@ -33,8 +33,8 @@ alias reposs='cd /Users/user/____Sandruk/__Vaults_Databases/__Repositories && pw
 
 # Sandruk (Personal)
 alias sand='cd /Users/user/____Sandruk'
-alias pkm='cd /Users/user/____Sandruk/PKM'
-alias brain='cd /Users/user/____Sandruk/PKM/__SecondBrain'
+# alias pkm='cd /Users/user/____Sandruk/___PKM'
+alias brain='cd /Users/user/____Sandruk/___PKM/__SecondBrain'
 alias devopss='cd /Users/user/____Sandruk/___PARA/__Areas/_5_CAREER/DEVOPS/automations && pwd && git status && git add . && git commit -m "auto update"'
 alias exportclaude='cd /Users/user/____Sandruk/___PKM/_Outputs_AI/claude-code-export-files && pwd'
 alias cdsubs='cd /Users/user/____Sandruk/___PKM/_Outputs_External/subtitles-youtube && pwd'

@@ -12,7 +12,7 @@ alias mono='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-monor
 alias api='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-api'
 alias docs='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-docs'
 alias garden='cd /Users/user/__Repositories/HypeTrain/repositories/hypetrain-garden'
-alias pkm='cd /Users/user/____Sandruk/___PKM'
+# alias pkm='cd /Users/user/____Sandruk/___PKM'
 alias repos='cd /Users/user/__Repositories'
 
 # 🚀 Enhanced workspace aliases with path support
