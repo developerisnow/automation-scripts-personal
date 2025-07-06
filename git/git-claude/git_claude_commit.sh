@@ -98,19 +98,29 @@ discover_claude_folders() {
         
         log_info "Searching in: $search_path"
         
-        # Find .claude directories and process them one by one
-        find "$search_path" -type d -name ".claude" -maxdepth 5 2>/dev/null | while IFS= read -r claude_dir; do
+        # Find .claude directories and write directly to temp file
+        find "$search_path" -type d -name ".claude" -maxdepth 5 2>/dev/null > "$temp_discoveries"
+        
+        # Process each found directory
+        while IFS= read -r claude_dir; do
+            if [[ -z "$claude_dir" ]]; then continue; fi
+            
             # Skip if already in config
             if jq -e --arg path "$claude_dir" '.claude_paths | has($path)' "$CONFIG_FILE" >/dev/null 2>&1; then
                 continue
             fi
             
-            echo "$claude_dir" >> "$temp_discoveries"
+            # Add to a separate temp file for new paths
+            echo "$claude_dir" >> "${temp_discoveries}.new"
             log_success "Found new .claude folder: $claude_dir"
-        done
+        done < "$temp_discoveries"
     done
     
-    new_paths_found=$(grep -c . "$temp_discoveries")
+    # Count new paths found
+    if [[ -f "${temp_discoveries}.new" ]]; then
+        new_paths_found=$(grep -c . "${temp_discoveries}.new" 2>/dev/null || echo 0)
+        TEMP_FILES+=("${temp_discoveries}.new") # Register for cleanup
+    fi
 
     # Add new discoveries to config
     if [[ "$new_paths_found" -gt 0 ]]; then
@@ -119,7 +129,7 @@ discover_claude_folders() {
         # Update config with new paths
         local temp_config="/tmp/claude_config_$$"
         jq --arg timestamp "$current_timestamp" \
-           --rawfile newpaths "$temp_discoveries" \
+           --rawfile newpaths "${temp_discoveries}.new" \
            '.meta.last_discovery = $timestamp |
             (.claude_paths += (
                 $newpaths | split("\n") | map(select(length > 0)) | 
@@ -142,7 +152,6 @@ discover_claude_folders() {
         log_info "No new .claude folders found"
     fi
     
-    # The trap will handle cleanup
 }
 
 # 📚 Load paths from config file
@@ -261,7 +270,6 @@ commit_claude_files() {
 commit_memory_bank_folders() {
     log_header "🧠 Starting memory-bank commit..."
     
-    local found_banks=0
     local temp_banks_file
     temp_banks_file=$(mktemp)
     TEMP_FILES+=("$temp_banks_file")
@@ -272,14 +280,27 @@ commit_memory_bank_folders() {
         fi
         
         # Find directories named "memory-bank", up to a reasonable depth
-        find "$search_path" -type d -name "memory-bank" -maxdepth 5 2>/dev/null | while IFS= read -r mb_dir; do
+        local temp_find_results
+        temp_find_results=$(mktemp)
+        TEMP_FILES+=("$temp_find_results")
+        
+        find "$search_path" -type d -name "memory-bank" -maxdepth 5 2>/dev/null > "$temp_find_results"
+        
+        while IFS= read -r mb_dir; do
+            if [[ -z "$mb_dir" ]]; then continue; fi
+            
             # Check if it is a real directory and not a symbolic link
             if [[ -d "$mb_dir" && ! -L "$mb_dir" ]]; then
                 echo "$mb_dir" >> "$temp_banks_file"
-                ((found_banks++))
             fi
-        done
+        done < "$temp_find_results"
     done
+
+    # Count found banks after the loop completes
+    local found_banks=0
+    if [[ -f "$temp_banks_file" ]]; then
+        found_banks=$(grep -c . "$temp_banks_file" 2>/dev/null || echo 0)
+    fi
 
     if [[ $found_banks -eq 0 ]]; then
         log_info "No 'memory-bank' directories found to commit."
